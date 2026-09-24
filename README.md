@@ -54,10 +54,12 @@ cd backend
 pnpm exec wrangler dev --ip 0.0.0.0 --port 8787
 
 # terminal 2 (finds your LAN IP, checks the Worker, launches the app)
-pwsh -File scripts/dev-phone.ps1
+powershell -ExecutionPolicy Bypass -File scripts/dev-phone.ps1
 ```
 
 Debug builds allow cleartext HTTP for this workflow; release builds do not.
+`powershell` is Windows PowerShell 5.1 and is present on every Windows machine; use `pwsh` instead
+only if you have PowerShell 7 installed.
 
 ## Checks
 

@@ -8,8 +8,8 @@
     is reachable on it, and launches the app with the matching API_BASE_URL.
 
 .EXAMPLE
-    pwsh -File scripts/dev-phone.ps1
-    pwsh -File scripts/dev-phone.ps1 -Port 8788 -Device fuorhatwpfceda9p
+    powershell -ExecutionPolicy Bypass -File scripts/dev-phone.ps1
+    powershell -ExecutionPolicy Bypass -File scripts/dev-phone.ps1 -Port 8788
 #>
 param(
     [string]$Device,
@@ -21,9 +21,26 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
 function Get-LanAddress {
-    Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-        Where-Object { $_.IPAddress -match '^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)' } |
-        Select-Object -First 1 -ExpandProperty IPAddress
+    # The phone can only reach the host on its real network adapter, so prefer the
+    # interface that carries the default route and skip virtual ones (WSL,
+    # Hyper-V, Docker, VPN, Bluetooth). Otherwise a 172.x vEthernet address wins.
+    $virtualPattern = 'vEthernet|WSL|Loopback|Hyper-V|VirtualBox|VMware|Docker|Bluetooth|Tailscale|ZeroTier|Npcap|TAP-|VPN|Remote NDIS'
+
+    Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue |
+        Sort-Object RouteMetric, InterfaceMetric |
+        ForEach-Object {
+            $adapter = Get-NetAdapter -InterfaceIndex $_.InterfaceIndex -ErrorAction SilentlyContinue
+            if (-not $adapter -or $adapter.Status -ne 'Up') { return }
+            if ($adapter.Name -match $virtualPattern -or $adapter.InterfaceDescription -match $virtualPattern) { return }
+
+            $address = Get-NetIPAddress -InterfaceIndex $_.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+                Where-Object { $_.IPAddress -notlike '169.254.*' -and $_.IPAddress -notlike '127.*' } |
+                Select-Object -First 1 -ExpandProperty IPAddress
+
+            if ($address) {
+                [pscustomobject]@{ IPAddress = $address; Adapter = $adapter.Name }
+            }
+        } | Select-Object -First 1
 }
 
 function Test-PortOpen {
@@ -41,12 +58,20 @@ function Test-PortOpen {
     }
 }
 
-$lanAddress = if ($ApiBaseUrl) { ([Uri]$ApiBaseUrl).Host } else { Get-LanAddress }
-if (-not $lanAddress) {
-    Write-Error 'Could not determine a LAN address. Pass -ApiBaseUrl http://<host>:<port>.'
+if ($ApiBaseUrl) {
+    $lanAddress = ([Uri]$ApiBaseUrl).Host
+    $adapterName = 'from -ApiBaseUrl'
+} else {
+    $lan = Get-LanAddress
+    if (-not $lan) {
+        Write-Error 'Could not determine a LAN address. Pass -ApiBaseUrl http://<host>:<port>.'
+    }
+    $lanAddress = $lan.IPAddress
+    $adapterName = $lan.Adapter
 }
 
 $baseUrl = if ($ApiBaseUrl) { $ApiBaseUrl.TrimEnd('/') } else { "http://${lanAddress}:${Port}" }
+Write-Host "Host address: $lanAddress ($adapterName)" -ForegroundColor Cyan
 
 if (-not (Test-PortOpen -HostName $lanAddress -PortNumber $Port)) {
     Write-Host "The Worker is not reachable on ${lanAddress}:${Port} yet." -ForegroundColor Yellow
