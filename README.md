@@ -70,6 +70,26 @@ cd app && flutter analyze && flutter test
 
 CI runs the same commands on every pull request.
 
+## What is not in this repository
+
+A fresh clone builds and passes every check without any of these, but you need them to run against
+real services:
+
+| Path | Purpose | How to get it |
+| --- | --- | --- |
+| `backend/.dev.vars` | Local Worker secrets: `JWT_SECRET`, `FCM_SERVICE_ACCOUNT`, `RESEND_API_KEY`, `EMAIL_FROM` | `cp backend/.dev.vars.example backend/.dev.vars` and fill it in |
+| `backend/firebase-service-account.json` | Source of the `FCM_SERVICE_ACCOUNT` value | Firebase console → Project settings → Service accounts |
+| `app/android/key.properties` and `app/android/upload-keystore.jks` | Release signing | `keytool -genkeypair` (see the deployment runbook). Without them release builds fall back to debug keys |
+| `dist/` | Built APKs | `flutter build apk --release` |
+
+`app/android/app/google-services.json` **is** committed. Google documents it as non-secret — the key
+inside is restricted to this package name — and the Android build needs it to configure Firebase.
+
+## Branches
+
+`main` is what ships. `develop` collects integration work. Feature and fix branches are named
+`feature/*` and `fix/*` and land through pull requests with CI green.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
