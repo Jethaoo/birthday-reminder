@@ -198,9 +198,18 @@ export async function runReminderEngine(env: Env, now = new Date()): Promise<Rem
         },
       })
 
-      if (push.failed > 0 && push.sent === 0) {
+      if (push.sent === 0) {
+        // Either every device was rejected, or the account has no devices yet.
+        // Recording this as "sent" would hide a delivery that never happened.
         summary.failed += 1
-        await finishNotification(env, candidate, 'failed', 'No device accepted the notification.')
+        await finishNotification(
+          env,
+          candidate,
+          'failed',
+          push.failed > 0
+            ? `No device accepted the notification (${push.reason ?? 'unknown'}).`
+            : 'No registered devices for this account.',
+        )
       } else {
         summary.sent += 1
         const note = push.simulated

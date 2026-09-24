@@ -31,10 +31,26 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 24),
           Card(
             child: Column(
-              children: const [
-                ListTile(title: Text('Privacy policy'), subtitle: Text('How your data is handled')),
+              children: [
+                const ListTile(
+                  title: Text('Privacy policy'),
+                  subtitle: Text('How your data is handled'),
+                ),
+                const Divider(height: 1),
+                const ListTile(
+                  title: Text('Terms of service'),
+                  subtitle: Text('Rules for using the app'),
+                ),
                 Divider(height: 1),
-                ListTile(title: Text('Terms of service'), subtitle: Text('Rules for using the app')),
+                ListTile(
+                  title: const Text('Open source licences'),
+                  subtitle: const Text('Bundled fonts and packages'),
+                  onTap: () => showLicensePage(
+                    context: context,
+                    applicationName: 'Birthday Reminder',
+                    applicationVersion: appVersion,
+                  ),
+                ),
               ],
             ),
           ),

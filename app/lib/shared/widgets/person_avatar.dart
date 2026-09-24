@@ -66,6 +66,7 @@ class _Initials extends StatelessWidget {
       child: Text(
         initials,
         style: TextStyle(
+          fontFamily: 'DMSans',
           color: palette.textPrimary,
           fontWeight: FontWeight.w700,
           fontSize: size * 0.32,

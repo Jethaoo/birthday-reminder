@@ -7,7 +7,6 @@ import 'package:birthday_reminder/core/auth/session_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,11 +24,6 @@ const signedInState = AuthState(status: AuthStatus.signedIn, user: testUser);
 
 /// Signed-out state for the authentication screens.
 const signedOutState = AuthState(status: AuthStatus.signedOut);
-
-/// Google Fonts cannot be fetched in tests; the bundled fallback is used.
-void configureTestFonts() {
-  GoogleFonts.config.allowRuntimeFetching = false;
-}
 
 /// A session that is already signed in, so screens render without a login step.
 class FakeAuthController extends AuthController {

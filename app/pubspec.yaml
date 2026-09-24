@@ -48,7 +48,6 @@ dependencies:
   firebase_messaging: ^15.1.5
 
   # Presentation.
-  google_fonts: ^6.2.1
   intl: ^0.19.0
 
   # Photos and contacts.
@@ -78,6 +77,28 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    # Font licences, shown in the app's open source licence page.
+    - assets/fonts/OFL-DMSans.txt
+    - assets/fonts/OFL-Fraunces.txt
+
+  # Bundled so the app never depends on fetching fonts at runtime.
+  fonts:
+    - family: DMSans
+      fonts:
+        - asset: assets/fonts/DMSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/DMSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/DMSans-Bold.ttf
+          weight: 700
+    - family: Fraunces
+      fonts:
+        - asset: assets/fonts/Fraunces-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Fraunces-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -39,7 +39,15 @@ export async function sha256Hex(value: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-const PBKDF2_ITERATIONS = 210_000
+/**
+ * Cloudflare's runtime rejects PBKDF2 iteration counts above 100,000
+ * ("iteration counts above 100000 are not supported"), and local `workerd`
+ * does not enforce that cap — so this must stay at the platform maximum.
+ *
+ * Older hashes record their own iteration count in the stored value and keep
+ * verifying, so lowering this does not lock anyone out.
+ */
+const PBKDF2_ITERATIONS = 100_000
 const PBKDF2_HASH = 'SHA-256'
 
 async function deriveKey(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {

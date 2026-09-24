@@ -40,7 +40,6 @@ BirthdaySummary summary({
 
 void main() {
   setUp(() {
-    configureTestFonts();
     setUpPrefs();
   });
 

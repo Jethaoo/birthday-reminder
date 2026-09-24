@@ -53,6 +53,7 @@ describe('reminder engine', () => {
       birthdayDay: 30,
       reminders: [{ daysBefore: 7, reminderTime: '09:00' }],
     })
+    await api('POST', '/api/devices', { token: user.token, body: { fcmToken: 'dedupe-token' } })
 
     const first = await runReminderEngine(bindings, NOW)
     expect(first.sent).toBeGreaterThanOrEqual(1)
@@ -179,5 +180,22 @@ describe('reminder engine', () => {
     const summary = await runReminderEngine(bindings, NOW)
     expect(summary.sent).toBeGreaterThanOrEqual(1)
     expect(summary.failed).toBe(0)
+  })
+
+  it('records a failure when the account has no devices', async () => {
+    const user = await registerUser({ timezone: 'Asia/Kuala_Lumpur' })
+    const birthday = await createBirthday(user, {
+      birthdayMonth: 9,
+      birthdayDay: 30,
+      reminders: [{ daysBefore: 7, reminderTime: '09:00' }],
+    })
+
+    const summary = await runReminderEngine(bindings, NOW)
+
+    expect(summary.sent).toBe(0)
+    expect(summary.failed).toBeGreaterThanOrEqual(1)
+    const log = (await logsFor(birthday.id))[0]
+    expect(log?.status).toBe('failed')
+    expect(log?.error_message).toContain('No registered devices')
   })
 })

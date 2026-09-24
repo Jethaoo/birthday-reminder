@@ -24,7 +24,9 @@ class AppShell extends StatelessWidget {
     return Scaffold(
       body: Column(
         children: [
-          const OfflineBanner(),
+          // The banner sits above the screen content, so it owns the top inset;
+          // the screens below then no longer need to pad for the status bar.
+          const SafeArea(bottom: false, child: OfflineBanner()),
           Expanded(child: navigationShell),
         ],
       ),

@@ -19,7 +19,8 @@
     {
       "binding": "DB",
       "database_name": "birthday-reminder",
-      // Replace with the real database id before running --remote commands.
+      // The default (local) environment never deploys, so this id is unused;
+      // `wrangler dev --local` serves a local database instead.
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations"
     }
@@ -29,5 +30,60 @@
       "binding": "PHOTOS",
       "bucket_name": "birthday-reminder-photos"
     }
-  ]
+  ],
+
+  // Deploy with `wrangler deploy --env staging` or `--env production`.
+  // Named environments do not inherit bindings, vars or triggers.
+  "env": {
+    "staging": {
+      "name": "birthday-reminder-staging",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        // Used to build password-reset links.
+        "APP_BASE_URL": "https://birthday-reminder-staging.jpaypay17.workers.dev"
+      },
+      "triggers": {
+        "crons": ["* * * * *"]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "birthday-reminder-staging",
+          "database_id": "287fb6d2-02a9-4c0e-8bcf-ce9464e6fdc9",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "PHOTOS",
+          "bucket_name": "birthday-reminder-photos-staging"
+        }
+      ]
+    },
+    "production": {
+      "name": "birthday-reminder",
+      "vars": {
+        "ENVIRONMENT": "production",
+        // Replace with a custom domain when one is attached.
+        "APP_BASE_URL": "https://birthday-reminder.jpaypay17.workers.dev"
+      },
+      "triggers": {
+        "crons": ["* * * * *"]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "birthday-reminder",
+          "database_id": "12220dcc-c1bd-441b-bf8c-fec98e1a951e",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "PHOTOS",
+          "bucket_name": "birthday-reminder-photos"
+        }
+      ]
+    }
+  }
 }

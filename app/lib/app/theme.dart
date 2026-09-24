@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+/// Bundled font families, declared in pubspec.yaml. They are shipped with the
+/// app so typography never depends on a runtime download.
+const _body = 'DMSans';
+const _display = 'Fraunces';
 
 /// Design tokens taken from the approved Figma design.
 class AppPalette {
@@ -113,43 +117,57 @@ class AppTheme {
       outline: palette.border,
     );
 
+    TextStyle body({
+      required double size,
+      FontWeight weight = FontWeight.w400,
+      Color? color,
+      double? spacing,
+      double height = 1.3,
+    }) =>
+        TextStyle(
+          fontFamily: _body,
+          fontSize: size,
+          fontWeight: weight,
+          color: color ?? palette.textPrimary,
+          letterSpacing: spacing,
+          height: height,
+        );
+
+    TextStyle display({
+      required double size,
+      FontWeight weight = FontWeight.w700,
+      double? spacing,
+    }) =>
+        TextStyle(
+          fontFamily: _display,
+          fontSize: size,
+          fontWeight: weight,
+          color: palette.textPrimary,
+          letterSpacing: spacing,
+          height: 1.15,
+        );
+
+    // Every Material text role is defined so no widget falls back to Roboto.
     final textTheme = TextTheme(
-      displaySmall: GoogleFonts.fraunces(
-        fontSize: 30,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -1.2,
-        color: palette.textPrimary,
-      ),
-      headlineSmall: GoogleFonts.fraunces(
-        fontSize: 22,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.6,
-        color: palette.textPrimary,
-      ),
-      titleMedium: GoogleFonts.dmSans(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.4,
-        color: palette.textPrimary,
-      ),
-      titleSmall: GoogleFonts.dmSans(
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-        color: palette.textPrimary,
-      ),
-      bodyLarge: GoogleFonts.dmSans(fontSize: 16, color: palette.textPrimary),
-      bodyMedium: GoogleFonts.dmSans(fontSize: 14, color: palette.textPrimary),
-      bodySmall: GoogleFonts.dmSans(fontSize: 12, color: palette.textSecondary),
-      labelLarge: GoogleFonts.dmSans(
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        color: palette.textPrimary,
-      ),
-      labelSmall: GoogleFonts.dmSans(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
+      displayLarge: display(size: 46, spacing: -1.8),
+      displayMedium: display(size: 38, spacing: -1.5),
+      displaySmall: display(size: 30, spacing: -1.2),
+      headlineLarge: display(size: 28, spacing: -1),
+      headlineMedium: display(size: 24, spacing: -0.8),
+      headlineSmall: display(size: 22, spacing: -0.6),
+      titleLarge: body(size: 20, weight: FontWeight.w700, spacing: -0.5),
+      titleMedium: body(size: 18, weight: FontWeight.w700, spacing: -0.4),
+      titleSmall: body(size: 15, weight: FontWeight.w700),
+      bodyLarge: body(size: 16),
+      bodyMedium: body(size: 14),
+      bodySmall: body(size: 12, color: palette.textSecondary),
+      labelLarge: body(size: 14, weight: FontWeight.w700),
+      labelMedium: body(size: 12, weight: FontWeight.w500, color: palette.textSecondary),
+      labelSmall: body(
+        size: 11,
+        weight: FontWeight.w700,
         color: palette.textSecondary,
+        spacing: 1.2,
       ),
     );
 

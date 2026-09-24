@@ -19,7 +19,6 @@ BirthdaySummary entry({required String id, required String name, required int da
 
 void main() {
   setUp(() {
-    configureTestFonts();
     setUpPrefs();
   });
 

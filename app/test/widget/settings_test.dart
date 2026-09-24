@@ -12,7 +12,6 @@ import '../support/harness.dart';
 
 void main() {
   setUp(() {
-    configureTestFonts();
     setUpPrefs();
   });
 

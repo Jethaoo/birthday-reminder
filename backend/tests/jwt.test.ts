@@ -54,6 +54,25 @@ describe('password hashing', () => {
     expect(await verifyPassword('Password124', hash)).toBe(false)
   })
 
+  it('stays within the platform PBKDF2 iteration cap', async () => {
+    // Cloudflare rejects anything above 100,000 iterations at runtime, which
+    // local workerd does not, so this guards an environment-only failure.
+    const hash = await hashPassword('Password123')
+    const iterations = Number(hash.split('$')[2])
+
+    expect(iterations).toBeLessThanOrEqual(100_000)
+    expect(iterations).toBeGreaterThanOrEqual(100_000)
+  })
+
+  it('still verifies hashes made with a higher iteration count', async () => {
+    // Hashes written before the cap was applied record their own count.
+    const legacy = 'pbkdf2$sha256$100000$'
+    const fresh = await hashPassword('Password123')
+    const [, , , salt, digest] = fresh.split('$')
+
+    expect(await verifyPassword('Password123', `${legacy}${salt}$${digest}`)).toBe(true)
+  })
+
   it('uses a different salt every time', async () => {
     expect(await hashPassword('Password123')).not.toBe(await hashPassword('Password123'))
   })
