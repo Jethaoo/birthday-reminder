@@ -1,0 +1,6 @@
+# Build-script approvals live in the workspace file. These packages ship the
+# native binaries the Worker toolchain (wrangler, workerd, esbuild) needs.
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true

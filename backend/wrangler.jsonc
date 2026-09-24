@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "birthday-reminder",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "triggers": {
+    // The reminder engine runs every minute and is idempotent.
+    "crons": ["* * * * *"]
+  },
+  "vars": {
+    "ENVIRONMENT": "development",
+    "APP_BASE_URL": "http://localhost:8443"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "birthday-reminder",
+      // Replace with the real database id before running --remote commands.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "birthday-reminder-photos"
+    }
+  ]
+}

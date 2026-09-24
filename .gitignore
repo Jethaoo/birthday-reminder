@@ -1,0 +1,39 @@
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+
+# Node / Cloudflare Worker
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.dev.vars.*
+*.tsbuildinfo
+
+# Flutter / Dart
+app/.dart_tool/
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/android/app/*.jks
+app/android/app/*.keystore
+*.iml
+
+# Secrets — never commit
+.env
+.env.*
+secrets/
+**/firebase-service-account*.json
+**/service-account*.json
+
+# Logs and caches
+*.log
+logs/
+.cache/
