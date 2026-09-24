@@ -26,6 +26,8 @@ export interface PushResult {
   /** Tokens FCM reported as permanently invalid; they are deactivated. */
   invalidTokens: string[]
   simulated: boolean
+  /** FCM status of the last rejection, e.g. `UNREGISTERED`, for diagnostics. */
+  reason?: string
 }
 
 interface ServiceAccount {
@@ -201,6 +203,7 @@ export async function sendPushToUser(env: Env, userId: string, message: PushMess
       // Non-JSON error bodies keep the default reason.
     }
     console.error('fcm_send_failed', { status: response.status, deviceId: device.id, reason })
+    result.reason = reason
 
     if (response.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(errorBody)) {
       result.invalidTokens.push(device.fcm_token)

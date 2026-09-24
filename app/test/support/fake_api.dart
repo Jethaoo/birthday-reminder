@@ -37,6 +37,8 @@ class FakeApi implements BirthdayReminderApi {
   final List<BirthdayQuery> queries = [];
   final List<Uint8List> uploads = [];
   ApiException? nextError;
+  TestNotificationResult testNotificationResult =
+      const TestNotificationResult(sent: 1, failed: 0, simulated: false);
 
   void _record(String name) => calls[name] = (calls[name] ?? 0) + 1;
 
@@ -256,9 +258,10 @@ class FakeApi implements BirthdayReminderApi {
   }
 
   @override
-  Future<void> sendTestNotification({String? birthdayId}) async {
+  Future<TestNotificationResult> sendTestNotification({String? birthdayId}) async {
     _record('sendTestNotification');
     _maybeThrow();
+    return testNotificationResult;
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/api/birthday_reminder_api.dart';
 import '../../../core/providers.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../shared/models/reminder.dart';
@@ -138,19 +139,19 @@ class NotificationSettingsScreen extends ConsumerWidget {
           Text('Test delivery', style: text.titleMedium),
           const SizedBox(height: 6),
           Text(
-            'Sends a push to the devices signed in to this account, so you can confirm notifications arrive.',
+            'Sends a push to the devices signed in to this account, so you can confirm notifications arrive. '
+            'While the app is open the message appears as a banner here; leave the app to see a tray notification.',
             style: text.bodySmall,
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () async {
               try {
-                await ref.read(apiProvider).sendTestNotification();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Test notification sent to your devices.')),
-                  );
-                }
+                final result = await ref.read(apiProvider).sendTestNotification();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(_testResultMessage(result))),
+                );
               } on ApiException catch (error) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
@@ -169,5 +170,21 @@ class NotificationSettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Reports what the server actually did, so "sent" is never assumed.
+  String _testResultMessage(TestNotificationResult result) {
+    if (result.simulated) {
+      return 'Delivery simulated: the server has no FCM credentials configured.';
+    }
+    if (result.hasNoDevices) {
+      return 'No devices registered yet. Sign in on a device before testing.';
+    }
+    if (result.sent > 0) {
+      return 'Sent to ${result.sent} device${result.sent == 1 ? '' : 's'}. '
+          'Leave the app to see it in the notification shade.';
+    }
+    return 'FCM rejected the message for ${result.failed} '
+        'device${result.failed == 1 ? '' : 's'}.';
   }
 }

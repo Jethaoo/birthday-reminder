@@ -1,6 +1,7 @@
 import 'package:birthday_reminder/features/settings/presentation/settings_screen.dart';
 import 'package:birthday_reminder/features/settings/presentation/notification_settings_screen.dart';
 import 'package:birthday_reminder/core/api/api_exception.dart';
+import 'package:birthday_reminder/core/api/birthday_reminder_api.dart';
 import 'package:birthday_reminder/shared/models/user_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -101,5 +102,42 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(api.calls['sendTestNotification'], 1);
+    expect(find.textContaining('Sent to 1 device'), findsOneWidget);
+  });
+
+  testWidgets('says when no device is registered for the test push', (tester) async {
+    await useTallSurface(tester);
+    final api = FakeApi()
+      ..testNotificationResult =
+          const TestNotificationResult(sent: 0, failed: 0, simulated: false);
+
+    await tester.pumpWidget(
+      wrapWithRouter(const NotificationSettingsScreen(), api: api, auth: signedInState),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    await tapVisible(tester, find.text('Send a test notification'));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.textContaining('No devices registered yet'), findsOneWidget);
+  });
+
+  testWidgets('reports simulated delivery when the server has no FCM credentials', (tester) async {
+    await useTallSurface(tester);
+    final api = FakeApi()
+      ..testNotificationResult =
+          const TestNotificationResult(sent: 1, failed: 0, simulated: true);
+
+    await tester.pumpWidget(
+      wrapWithRouter(const NotificationSettingsScreen(), api: api, auth: signedInState),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    await tapVisible(tester, find.text('Send a test notification'));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.textContaining('Delivery simulated'), findsOneWidget);
   });
 }

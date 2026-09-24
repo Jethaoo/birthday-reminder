@@ -17,6 +17,25 @@ class AuthSession {
   final String accessToken;
 }
 
+/// Outcome of a development test push, so the app can report what really
+/// happened instead of assuming success.
+class TestNotificationResult {
+  const TestNotificationResult({required this.sent, required this.failed, required this.simulated});
+
+  final int sent;
+  final int failed;
+  final bool simulated;
+
+  factory TestNotificationResult.fromJson(Map<String, dynamic> json) => TestNotificationResult(
+        sent: json['sent'] as int? ?? 0,
+        failed: json['failed'] as int? ?? 0,
+        simulated: json['simulated'] as bool? ?? false,
+      );
+
+  /// True when nothing was delivered and no device was even targeted.
+  bool get hasNoDevices => sent == 0 && failed == 0;
+}
+
 class BirthdayQuery {
   const BirthdayQuery({
     this.search,
@@ -112,7 +131,7 @@ abstract class BirthdayReminderApi {
 
   Future<void> registerDevice({required String fcmToken, String? deviceName});
 
-  Future<void> sendTestNotification({String? birthdayId});
+  Future<TestNotificationResult> sendTestNotification({String? birthdayId});
 
   Future<String> uploadPhoto({required Uint8List bytes, required String filename});
 
@@ -415,10 +434,11 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
   }
 
   @override
-  Future<void> sendTestNotification({String? birthdayId}) async {
-    await _request('POST', '/api/dev/test-notification', body: {
+  Future<TestNotificationResult> sendTestNotification({String? birthdayId}) async {
+    final json = await _request('POST', '/api/dev/test-notification', body: {
       'birthdayId': ?birthdayId,
     });
+    return TestNotificationResult.fromJson(json);
   }
 
   @override

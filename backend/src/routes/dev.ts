@@ -44,12 +44,21 @@ dev.post('/test-notification', async (c) => {
       nowIso(),
       nowIso(),
       result.failed > 0 && result.sent === 0 ? 'failed' : 'sent',
-      result.simulated ? 'Delivery simulated: FCM credentials are not configured.' : null,
+      result.simulated
+        ? 'Delivery simulated: FCM credentials are not configured.'
+        : result.failed > 0
+          ? `FCM rejected the message (${result.reason ?? 'unknown'}).`
+          : null,
       nowIso(),
     )
     .run()
 
-  return c.json(result)
+  return c.json({
+    sent: result.sent,
+    failed: result.failed,
+    simulated: result.simulated,
+    reason: result.reason ?? null,
+  })
 })
 
 export default dev
