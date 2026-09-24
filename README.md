@@ -28,6 +28,7 @@ birthday/
 # Backend (local D1 + Worker on :8787)
 cd backend
 pnpm install
+cp .dev.vars.example .dev.vars   # sets JWT_SECRET; add FCM/email keys to send real pushes
 pnpm db:migrate:local
 pnpm dev
 

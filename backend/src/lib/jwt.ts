@@ -4,6 +4,19 @@ const encoder = new TextEncoder()
 // Long-lived by design: V1 uses a single access token and re-login on expiry.
 export const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30
 
+/**
+ * A missing secret would otherwise surface as an opaque WebCrypto failure, so
+ * it is reported explicitly. `.dev.vars` sets it locally and `wrangler secret
+ * put JWT_SECRET` sets it for deployed environments.
+ */
+function assertSecret(secret: string): void {
+  if (!secret || secret.length < 16) {
+    throw new Error(
+      'JWT_SECRET is missing or too short. Set it in backend/.dev.vars for local development, or with `wrangler secret put JWT_SECRET`.',
+    )
+  }
+}
+
 export interface TokenClaims {
   sub: string
   iat: number
@@ -22,6 +35,7 @@ async function hmacKey(secret: string): Promise<CryptoKey> {
 }
 
 export async function signToken(userId: string, secret: string, now = new Date()): Promise<string> {
+  assertSecret(secret)
   const issuedAt = Math.floor(now.getTime() / 1000)
   const header = encodeSegment({ alg: 'HS256', typ: 'JWT' })
   const payload = encodeSegment({
@@ -44,6 +58,7 @@ export async function verifyToken(
   secret: string,
   now = new Date(),
 ): Promise<TokenClaims | null> {
+  assertSecret(secret)
   const parts = token.split('.')
   if (parts.length !== 3) return null
 

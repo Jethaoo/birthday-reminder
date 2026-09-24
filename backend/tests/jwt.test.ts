@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { signToken, verifyToken } from '../src/lib/jwt'
 import { hashPassword, sha256Hex, verifyPassword } from '../src/lib/crypto'
 
-const SECRET = 'test-secret'
+const SECRET = 'test-secret-that-is-long-enough'
+const OTHER_SECRET = 'other-secret-that-is-long-enough'
 
 function base64UrlJson(value: unknown): string {
   return btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
@@ -17,7 +18,7 @@ describe('jwt', () => {
   })
 
   it('rejects a token signed with another secret', async () => {
-    const token = await signToken('user-1', 'other-secret')
+    const token = await signToken('user-1', OTHER_SECRET)
     expect(await verifyToken(token, SECRET)).toBeNull()
   })
 
@@ -36,6 +37,11 @@ describe('jwt', () => {
   it('rejects malformed input', async () => {
     expect(await verifyToken('not.a.token', SECRET)).toBeNull()
     expect(await verifyToken('', SECRET)).toBeNull()
+  })
+
+  it('refuses to sign with a missing or weak secret', async () => {
+    await expect(signToken('user-1', '')).rejects.toThrow(/JWT_SECRET/)
+    await expect(signToken('user-1', 'too-short')).rejects.toThrow(/JWT_SECRET/)
   })
 })
 
