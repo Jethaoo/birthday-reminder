@@ -21,17 +21,53 @@ import 'reminder_editor.dart';
 
 const _relationships = <String>['Family', 'Friend', 'Colleague', 'Other'];
 
-class BirthdayFormScreen extends ConsumerStatefulWidget {
+class BirthdayFormScreen extends ConsumerWidget {
   const BirthdayFormScreen({super.key, this.birthdayId});
 
   /// Null when creating a new birthday.
   final String? birthdayId;
 
   @override
-  ConsumerState<BirthdayFormScreen> createState() => _BirthdayFormScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final id = birthdayId;
+    if (id == null) return const _BirthdayForm(key: ValueKey('new-birthday'));
+
+    final detail = ref.watch(birthdayDetailProvider(id));
+    return detail.when(
+      loading: () => const Scaffold(
+        body: Padding(
+          padding: EdgeInsets.all(AppSpacing.screenPadding),
+          child: LoadingSkeletonList(rows: 4, height: 64),
+        ),
+      ),
+      error: (error, _) => Scaffold(
+        appBar: AppBar(title: const Text('Edit birthday')),
+        body: ErrorView(
+          message: error is ApiException ? error.message : 'Could not load this birthday.',
+          onRetry: () => ref.invalidate(birthdayDetailProvider(id)),
+        ),
+      ),
+      // Keyed by id so opening a different record rebuilds the form state.
+      data: (birthday) => _BirthdayForm(key: ValueKey(birthday.id), existing: birthday),
+    );
+  }
 }
 
-class _BirthdayFormScreenState extends ConsumerState<BirthdayFormScreen> {
+/// The form itself, handed an already-loaded birthday (or null to create one).
+///
+/// Fields are populated in [initState] rather than during a build pass: doing it
+/// during build left the edit screen permanently blank, because mutating state
+/// there never triggers the rebuild that would render the form.
+class _BirthdayForm extends ConsumerStatefulWidget {
+  const _BirthdayForm({super.key, this.existing});
+
+  final Birthday? existing;
+
+  @override
+  ConsumerState<_BirthdayForm> createState() => _BirthdayFormState();
+}
+
+class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _yearController = TextEditingController();
@@ -49,10 +85,29 @@ class _BirthdayFormScreenState extends ConsumerState<BirthdayFormScreen> {
   bool _remindersEnabled = false;
   bool _saving = false;
   bool _uploadingPhoto = false;
-  bool _loadedExisting = false;
-  Birthday? _existing;
 
-  bool get _isEditing => widget.birthdayId != null;
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final existing = widget.existing;
+    if (existing == null) return;
+
+    _nameController.text = existing.name;
+    _month = existing.birthdayMonth;
+    _day = existing.birthdayDay;
+    _yearController.text = existing.birthYear?.toString() ?? '';
+    _relationship = existing.relationship;
+    _phoneController.text = existing.phone ?? '';
+    _emailController.text = existing.email ?? '';
+    _notesController.text = existing.notes ?? '';
+    _giftIdeas = List.of(existing.giftIdeas);
+    _reminders = List.of(existing.reminders);
+    _photoUrl = existing.photoUrl;
+    _remindersEnabled = existing.reminders.isNotEmpty;
+  }
 
   @override
   void dispose() {
@@ -63,23 +118,6 @@ class _BirthdayFormScreenState extends ConsumerState<BirthdayFormScreen> {
     _notesController.dispose();
     _giftController.dispose();
     super.dispose();
-  }
-
-  void _hydrate(Birthday birthday) {
-    _existing = birthday;
-    _nameController.text = birthday.name;
-    _month = birthday.birthdayMonth;
-    _day = birthday.birthdayDay;
-    _yearController.text = birthday.birthYear?.toString() ?? '';
-    _relationship = birthday.relationship;
-    _phoneController.text = birthday.phone ?? '';
-    _emailController.text = birthday.email ?? '';
-    _notesController.text = birthday.notes ?? '';
-    _giftIdeas = List.of(birthday.giftIdeas);
-    _reminders = List.of(birthday.reminders);
-    _photoUrl = birthday.photoUrl;
-    _remindersEnabled = birthday.reminders.isNotEmpty;
-    _loadedExisting = true;
   }
 
   Future<void> _pickBirthday() async {
@@ -208,7 +246,7 @@ class _BirthdayFormScreenState extends ConsumerState<BirthdayFormScreen> {
   }
 
   Birthday _buildBirthday() => Birthday(
-        id: _existing?.id ?? '',
+        id: widget.existing?.id ?? '',
         name: _nameController.text.trim(),
         birthdayMonth: _month!,
         birthdayDay: _day!,
@@ -309,27 +347,6 @@ class _BirthdayFormScreenState extends ConsumerState<BirthdayFormScreen> {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
-
-    if (_isEditing && !_loadedExisting) {
-      final detail = ref.watch(birthdayDetailProvider(widget.birthdayId!));
-      return Scaffold(
-        appBar: AppBar(title: const Text('Edit birthday')),
-        body: detail.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.all(AppSpacing.screenPadding),
-            child: LoadingSkeletonList(rows: 4, height: 64),
-          ),
-          error: (error, _) => ErrorView(
-            message: error is ApiException ? error.message : 'Could not load this birthday.',
-            onRetry: () => ref.invalidate(birthdayDetailProvider(widget.birthdayId!)),
-          ),
-          data: (birthday) {
-            _hydrate(birthday);
-            return const SizedBox.shrink();
-          },
-        ),
-      );
-    }
 
     return Scaffold(
       appBar: AppBar(title: Text(_isEditing ? 'Edit birthday' : 'Add birthday')),

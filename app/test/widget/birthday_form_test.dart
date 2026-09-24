@@ -106,4 +106,64 @@ void main() {
 
     expect(find.widgetWithText(Chip, 'Perfume'), findsOneWidget);
   });
+
+  testWidgets('edit mode prefills the existing birthday', (tester) async {
+    await useTallSurface(tester);
+    // Regression: this screen was blank because it hydrated its fields during
+    // build and then rendered nothing, with no rebuild to follow.
+    final api = FakeApi(
+      birthdays: [
+        sampleBirthday(
+          id: 'birthday-1',
+          // Deliberately not the field hint text, which stays in the tree.
+          name: 'Alex Lim',
+          month: 9,
+          day: 30,
+          relationship: 'Friend',
+          notes: 'Likes travelling',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      wrapWithRouter(
+        const BirthdayFormScreen(birthdayId: 'birthday-1'),
+        api: api,
+        auth: signedInState,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Alex Lim'), findsOneWidget);
+    expect(find.text('30 September'), findsOneWidget);
+    expect(find.text('Likes travelling'), findsOneWidget);
+    expect(find.text('Friend'), findsWidgets);
+    expect(find.widgetWithText(FilledButton, 'Save changes'), findsOneWidget);
+  });
+
+  testWidgets('saving an edit updates the same record', (tester) async {
+    await useTallSurface(tester);
+    final api = FakeApi(birthdays: [sampleBirthday(id: 'birthday-1', name: 'Sarah Tan')]);
+
+    await tester.pumpWidget(
+      wrapWithRouter(
+        const BirthdayFormScreen(birthdayId: 'birthday-1'),
+        api: api,
+        auth: signedInState,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.enterText(find.byType(TextFormField).first, 'Sarah Tan-Lim');
+    await tapVisible(tester, find.widgetWithText(FilledButton, 'Save changes'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(api.updated, hasLength(1));
+    expect(api.updated.single.id, 'birthday-1');
+    expect(api.updated.single.name, 'Sarah Tan-Lim');
+    expect(api.created, isEmpty);
+  });
 }
