@@ -43,6 +43,22 @@ pnpm install
 pnpm dev
 ```
 
+## Running against a physical Android device
+
+`10.0.2.2` only resolves on the Android emulator. For a real phone, start the Worker on all
+interfaces and point the app at your machine's LAN address:
+
+```powershell
+# terminal 1
+cd backend
+pnpm exec wrangler dev --ip 0.0.0.0 --port 8787
+
+# terminal 2 (finds your LAN IP, checks the Worker, launches the app)
+pwsh -File scripts/dev-phone.ps1
+```
+
+Debug builds allow cleartext HTTP for this workflow; release builds do not.
+
 ## Checks
 
 ```bash

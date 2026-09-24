@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_audible">Birthday reminders</string>
+    <string name="notification_channel_audible_description">Advance reminders, tomorrow reminders and birthday-day notifications</string>
+    <string name="notification_channel_silent">Birthday reminders (silent)</string>
+    <string name="notification_channel_silent_description">Reminders delivered without sound</string>
+</resources>

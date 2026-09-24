@@ -19,6 +19,9 @@ Cloudflare Worker  ──  REST API, auth, validation, ownership checks
   cron runs unable to send the same notification twice.
 - Notification types are `birthday_today`, `birthday_tomorrow` and `birthday_advance`; each type is
   independently gated by the user's notification settings.
+- Android 8+ controls notification sound per channel, so the app registers
+  `birthday_reminders` (with sound) and `birthday_reminders_silent`; the backend picks the channel from
+  the user's sound preference.
 - Dates are stored as month/day (plus optional year); the next occurrence and countdown are computed
   per request in the user's timezone.
 

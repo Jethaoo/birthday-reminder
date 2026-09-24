@@ -166,4 +166,18 @@ describe('reminder engine', () => {
     const devices = await json<{ items: unknown[] }>(await api('GET', '/api/devices', { token: user.token }))
     expect(devices.items).toHaveLength(2)
   })
+
+  it('never contacts FCM from the test environment', async () => {
+    const user = await registerUser({ timezone: 'Asia/Kuala_Lumpur' })
+    await createBirthday(user, {
+      birthdayMonth: 9,
+      birthdayDay: 30,
+      reminders: [{ daysBefore: 7, reminderTime: '09:00' }],
+    })
+    await api('POST', '/api/devices', { token: user.token, body: { fcmToken: 'guard-token' } })
+
+    const summary = await runReminderEngine(bindings, NOW)
+    expect(summary.sent).toBeGreaterThanOrEqual(1)
+    expect(summary.failed).toBe(0)
+  })
 })

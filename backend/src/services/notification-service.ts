@@ -7,7 +7,18 @@ export interface PushMessage {
   body: string
   data: Record<string, string>
   sound: boolean
+  /** Defaults to the channel implied by `sound`. */
+  channelId?: string
 }
+
+/**
+ * Android 8+ decides sound per channel, so the app registers one channel with
+ * sound and one without, and the backend picks per message.
+ */
+export const NOTIFICATION_CHANNELS = {
+  audible: 'birthday_reminders',
+  silent: 'birthday_reminders_silent',
+} as const
 
 export interface PushResult {
   sent: number
@@ -135,13 +146,19 @@ export async function sendPushToUser(env: Env, userId: string, message: PushMess
 
   // Without credentials the engine still records the notification so local
   // development and tests exercise the full scheduling path.
-  if (!account || !token) {
+  //
+  // Automated tests never contact Google: `.dev.vars` is loaded by the vitest
+  // Workers pool, so credentials can be present during a test run.
+  if (env.ENVIRONMENT === 'test' || !account || !token) {
     result.simulated = true
     result.sent = devices.results.length
     return result
   }
 
   for (const device of devices.results) {
+    const channelId =
+      message.channelId ?? (message.sound ? NOTIFICATION_CHANNELS.audible : NOTIFICATION_CHANNELS.silent)
+
     const response = await fetch(
       `https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`,
       {
@@ -158,8 +175,8 @@ export async function sendPushToUser(env: Env, userId: string, message: PushMess
             android: {
               priority: 'HIGH',
               notification: {
-                channel_id: 'birthday_reminders',
-                sound: message.sound ? 'default' : undefined,
+                channel_id: channelId,
+                sound: channelId === NOTIFICATION_CHANNELS.audible ? 'default' : undefined,
               },
             },
           },
@@ -174,6 +191,16 @@ export async function sendPushToUser(env: Env, userId: string, message: PushMess
 
     const errorBody = await response.text()
     result.failed += 1
+
+    // The reason is logged; the body is not, because FCM echoes the token back.
+    let reason = 'UNKNOWN'
+    try {
+      const parsed = JSON.parse(errorBody) as { error?: { status?: string } }
+      reason = parsed.error?.status ?? reason
+    } catch {
+      // Non-JSON error bodies keep the default reason.
+    }
+    console.error('fcm_send_failed', { status: response.status, deviceId: device.id, reason })
 
     if (response.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(errorBody)) {
       result.invalidTokens.push(device.fcm_token)

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug builds only. Allows plain HTTP so the app can talk to a Worker running
+  on a developer machine (http://10.0.2.2:8787 on an emulator, or the host's LAN
+  address on a physical device). Release builds keep cleartext blocked.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

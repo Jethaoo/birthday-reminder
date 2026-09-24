@@ -17,6 +17,7 @@ dist/
 # Flutter / Dart
 app/.dart_tool/
 app/build/
+app/android/build/
 app/.flutter-plugins
 app/.flutter-plugins-dependencies
 app/android/.gradle/
@@ -32,6 +33,9 @@ app/android/app/*.keystore
 secrets/
 **/firebase-service-account*.json
 **/service-account*.json
+# Firebase downloads keys as <project>-firebase-adminsdk-*.json by default.
+**/*firebase-adminsdk*.json
+**/*-adminsdk-*.json
 
 # Logs and caches
 *.log
