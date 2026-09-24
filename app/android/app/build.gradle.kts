@@ -27,8 +27,9 @@ android {
 
     defaultConfig {
         applicationId = "com.birthdayreminder.app"
-        // Android 6.0+ is required by the contacts and notification plugins.
-        minSdk = 23
+        // Flutter's default minimum (API 24+) already satisfies the contacts and
+        // notification plugins, so the scaffold value is kept.
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
