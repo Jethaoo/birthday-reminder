@@ -11,6 +11,12 @@ import '../../../shared/widgets/dialogs.dart';
 import '../../../shared/widgets/states.dart';
 import '../settings_providers.dart';
 
+String _defaultReminderLabel(int daysBefore) {
+  if (daysBefore == 0) return 'On birthday';
+  if (daysBefore == 1) return '1 day before';
+  return '$daysBefore days before';
+}
+
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -104,24 +110,25 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Text('DEFAULT REMINDER', style: text.labelSmall),
+          Text('REMINDERS & NOTIFICATIONS', style: text.labelSmall),
           const SizedBox(height: 8),
           Card(
-            child: settings.maybeWhen(
-              data: (current) => ListTile(
-                title: Text(
-                  current.defaultDaysBefore == 0
-                      ? 'On birthday'
-                      : current.defaultDaysBefore == 1
-                          ? '1 day before'
-                          : '${current.defaultDaysBefore} days before',
-                  style: text.titleSmall,
+            // Always visible: this is the only route to the reminder and test
+            // notification screen, so it must not disappear when the settings
+            // request fails (which is exactly when you need it).
+            child: ListTile(
+              leading: const Icon(Icons.notifications_active_outlined),
+              title: Text('Reminder & notification settings', style: text.titleSmall),
+              subtitle: Text(
+                settings.maybeWhen(
+                  data: (current) =>
+                      'Default: ${_defaultReminderLabel(current.defaultDaysBefore)} '
+                      'at ${formatReminderTime(current.defaultReminderTime)}',
+                  orElse: () => 'Default timing, sound and test notification',
                 ),
-                subtitle: Text('at ${formatReminderTime(current.defaultReminderTime)}'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/settings/notifications'),
               ),
-              orElse: () => const SizedBox.shrink(),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/settings/notifications'),
             ),
           ),
           const SizedBox(height: 20),

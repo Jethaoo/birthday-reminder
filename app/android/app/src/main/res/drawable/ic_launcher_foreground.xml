@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive icon foreground: a cake on the deep green background colour.
+
+  Every point stays within ~33 of the centre of the 108x108 canvas, so no
+  launcher mask (circle or rounded square) can clip the artwork, and the shapes
+  stay legible down to the 48px legacy size.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Cake body -->
+    <path
+        android:fillColor="#F8F8F4"
+        android:pathData="M39,60 H69 A9,9 0 0 1 78,69 A9,9 0 0 1 69,78 H39 A9,9 0 0 1 30,69 A9,9 0 0 1 39,60 Z" />
+
+    <!-- Candles sit behind the frosting -->
+    <path android:fillColor="#F8F8F4" android:pathData="M42,40 h5 v18 h-5 Z" />
+    <path android:fillColor="#F8F8F4" android:pathData="M51,40 h5 v18 h-5 Z" />
+    <path android:fillColor="#F8F8F4" android:pathData="M60,40 h5 v18 h-5 Z" />
+
+    <!-- Frosting -->
+    <path
+        android:fillColor="#FB8269"
+        android:pathData="M34,54 H74 A4,4 0 0 1 78,58 A4,4 0 0 1 74,62 H34 A4,4 0 0 1 30,58 A4,4 0 0 1 34,54 Z" />
+
+    <!-- Flames -->
+    <path
+        android:fillColor="#FFC08F"
+        android:pathData="M41.5,36.5 a3,3 0 1 1 6,0 a3,3 0 1 1 -6,0 Z" />
+    <path
+        android:fillColor="#FFC08F"
+        android:pathData="M50.5,36.5 a3,3 0 1 1 6,0 a3,3 0 1 1 -6,0 Z" />
+    <path
+        android:fillColor="#FFC08F"
+        android:pathData="M59.5,36.5 a3,3 0 1 1 6,0 a3,3 0 1 1 -6,0 Z" />
+</vector>
