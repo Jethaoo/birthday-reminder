@@ -85,6 +85,12 @@ real services:
 `app/android/app/google-services.json` **is** committed. Google documents it as non-secret — the key
 inside is restricted to this package name — and the Android build needs it to configure Firebase.
 
+This repository also contains the author's own deployment identifiers: the `workers.dev` subdomain,
+the D1 database ids and the R2 bucket names in `backend/wrangler.jsonc` and the deployment runbook.
+They are identifiers rather than credentials — none grant access without account authentication — but
+if you fork this project, replace them with your own before deploying, and use your own keystore and
+Firebase project.
+
 ## Branches
 
 `main` is what ships. `develop` collects integration work. Feature and fix branches are named
