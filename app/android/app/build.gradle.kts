@@ -47,22 +47,23 @@ android {
         versionName = flutter.versionName
     }
 
-    buildTypes {
-        release {
-            signingConfig =
-                if (hasReleaseKeystore) signingConfigs.getByName("release")
-                else signingConfigs.getByName("debug")
-        }
-    }
-
-    if (hasReleaseKeystore) {
-        signingConfigs {
+    // Declared before buildTypes so the release build type can reference it.
+    signingConfigs {
+        if (hasReleaseKeystore) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
                 storeFile = file(keystoreProperties["storeFile"] as String)
                 storePassword = keystoreProperties["storePassword"] as String
             }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig =
+                if (hasReleaseKeystore) signingConfigs.getByName("release")
+                else signingConfigs.getByName("debug")
         }
     }
 }

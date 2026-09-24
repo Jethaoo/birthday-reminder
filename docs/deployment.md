@@ -1,17 +1,21 @@
 # Deployment runbook
 
-Staging is deployed and verified. Production is prepared but not deployed.
+Staging and production are both deployed and verified. The release bundle is signed with the upload
+keystore. The Play Console listing is not created yet.
 
 ## Current resources
 
 | | staging | production |
 | --- | --- | --- |
-| Worker | `birthday-reminder-staging` | `birthday-reminder` (not deployed) |
+| Worker | `birthday-reminder-staging` | `birthday-reminder` |
 | URL | https://birthday-reminder-staging.jpaypay17.workers.dev | https://birthday-reminder.jpaypay17.workers.dev |
 | D1 | `birthday-reminder-staging` (`287fb6d2-02a9-4c0e-8bcf-ce9464e6fdc9`) | `birthday-reminder` (`12220dcc-c1bd-441b-bf8c-fec98e1a951e`) |
 | R2 | `birthday-reminder-photos-staging` | `birthday-reminder-photos` |
 | Cron | `* * * * *` | `* * * * *` |
 | Secrets | `JWT_SECRET`, `FCM_SERVICE_ACCOUNT` | `JWT_SECRET`, `FCM_SERVICE_ACCOUNT` |
+
+Both databases and both buckets are empty of test data; the smoke tests described below clean up
+after themselves.
 
 Both environments are defined in `backend/wrangler.jsonc` under `env`. Named environments do not
 inherit bindings, vars or triggers, so each block repeats them.
@@ -70,25 +74,32 @@ These behave differently on Cloudflare than in local `workerd`, so they are wort
 
 ## Android release signing
 
-Release builds currently fall back to debug keys, which Play rejects. Create an upload keystore and
-point the build at it:
+The upload keystore already exists:
+
+| | |
+| --- | --- |
+| File | `app/android/upload-keystore.jks` (gitignored) |
+| Alias | `upload` |
+| Valid | 2026-09-25 → 2054-02-10 |
+| SHA-256 | `BF:55:6B:A5:7B:65:24:16:55:8B:57:FA:0B:95:30:1C:81:21:14:41:DF:31:C5:97:A5:C4:CA:87:38:54:8D:A1` |
+
+`app/android/key.properties` points at it and is also gitignored. `build.gradle.kts` reads that file
+when present and falls back to the debug keys when it is missing, so contributors can still build.
+
+> **Back this keystore up somewhere safe.** If it is lost you cannot ship updates under the same
+> identity unless Play App Signing is enabled and you reset the upload key. It is not in git.
+
+Build the release bundle (43.7 MB, signed with the key above):
 
 ```bash
-keytool -genkeypair -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 \
-  -alias upload
+cd app
+flutter build appbundle --release \
+  --dart-define=API_BASE_URL=https://birthday-reminder.jpaypay17.workers.dev \
+  --dart-define=APP_VERSION=1.0.0
+
+# Confirm the signer before uploading:
+keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
 ```
-
-Then create `app/android/key.properties`:
-
-```properties
-storePassword=…
-keyPassword=…
-keyAlias=upload
-storeFile=/absolute/path/upload-keystore.jks
-```
-
-`app/android/app/build.gradle.kts` reads that file when present and keeps using debug keys when it is
-absent, so contributors can still build without the keystore.
 
 ## Verifying a deployment
 
