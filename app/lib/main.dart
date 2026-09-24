@@ -9,9 +9,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Firebase is initialised only when credentials are present, so the app still
-  // runs for contributors without google-services.json installed.
+  // runs for contributors without google-services.json installed. This must
+  // never stop the UI from starting.
   final push = PushService();
-  await push.initialize();
+  try {
+    await push.initialize();
+  } catch (error) {
+    debugPrint('Push notifications unavailable: $error');
+  }
 
   runApp(
     ProviderScope(

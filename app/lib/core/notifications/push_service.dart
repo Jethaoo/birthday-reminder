@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -13,9 +11,14 @@ Future<void> handleBackgroundMessage(RemoteMessage message) async {
 
 /// Thin wrapper over FCM so the rest of the app never touches Firebase directly.
 class PushService {
-  PushService({FirebaseMessaging? messaging}) : _messaging = messaging ?? FirebaseMessaging.instance;
+  PushService({FirebaseMessaging? messaging}) : _injected = messaging;
 
-  final FirebaseMessaging _messaging;
+  /// Only used by tests; production resolves the instance after Firebase starts.
+  final FirebaseMessaging? _injected;
+
+  /// Null until [initialize] succeeds. Touching `FirebaseMessaging.instance`
+  /// earlier throws `[core/no-app]` and would take the whole app down with it.
+  FirebaseMessaging? _messaging;
   bool _available = false;
 
   bool get isAvailable => _available;
@@ -23,20 +26,17 @@ class PushService {
   /// Returns false when Firebase credentials are missing, so local builds and
   /// tests keep working without `google-services.json`.
   Future<bool> initialize() async {
-    if (!Platform.isAndroid && !kIsWeb) {
-      _available = false;
-      return false;
-    }
-
     try {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp();
       }
+      _messaging = _injected ?? FirebaseMessaging.instance;
       FirebaseMessaging.onBackgroundMessage(handleBackgroundMessage);
       _available = true;
       return true;
     } catch (error) {
       debugPrint('Push notifications unavailable: $error');
+      _messaging = null;
       _available = false;
       return false;
     }
@@ -45,7 +45,7 @@ class PushService {
   Future<void> requestPermission() async {
     if (!_available) return;
     try {
-      await _messaging.requestPermission(alert: true, badge: true, sound: true);
+      await _messaging!.requestPermission(alert: true, badge: true, sound: true);
     } catch (error) {
       debugPrint('Notification permission request failed: $error');
     }
@@ -54,7 +54,7 @@ class PushService {
   Future<String?> token() async {
     if (!_available) return null;
     try {
-      return await _messaging.getToken();
+      return await _messaging!.getToken();
     } catch (error) {
       debugPrint('Could not read the FCM token: $error');
       return null;
@@ -64,7 +64,7 @@ class PushService {
   /// Called by FCM when the token rotates; the app re-registers the device.
   void onTokenRefresh(void Function(String token) listener) {
     if (!_available) return;
-    _messaging.onTokenRefresh.listen(listener);
+    _messaging!.onTokenRefresh.listen(listener);
   }
 
   /// Foreground messages are shown in-app because Android does not render them.
@@ -83,7 +83,7 @@ class PushService {
   Future<RemoteMessage?> initialMessage() async {
     if (!_available) return null;
     try {
-      return await _messaging.getInitialMessage();
+      return await _messaging!.getInitialMessage();
     } catch (_) {
       return null;
     }
