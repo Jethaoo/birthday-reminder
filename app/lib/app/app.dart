@@ -60,9 +60,17 @@ class _PushCoordinatorState extends ConsumerState<PushCoordinator> {
       }
     });
 
+    // Pushed, not `go`: a notification can open this screen while the app has no
+    // history, and `go` would replace the stack so Back closed the app.
+    void openBirthdayFromNotification(String route) {
+      final router = ref.read(routerProvider);
+      if (router.state.matchedLocation == route) return;
+      router.push(route);
+    }
+
     push.onNotificationTap((message) {
       final route = routeFromMessage(message);
-      if (route != null) ref.read(routerProvider).go(route);
+      if (route != null) openBirthdayFromNotification(route);
     });
 
     push.onForegroundMessage((message) {
@@ -76,7 +84,7 @@ class _PushCoordinatorState extends ConsumerState<PushCoordinator> {
 
     push.initialMessage().then((message) {
       final route = message == null ? null : routeFromMessage(message);
-      if (route != null) ref.read(routerProvider).go(route);
+      if (route != null) openBirthdayFromNotification(route);
     });
   }
 

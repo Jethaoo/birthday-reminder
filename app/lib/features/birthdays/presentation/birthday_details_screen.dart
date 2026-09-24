@@ -45,15 +45,30 @@ class BirthdayDetailsScreen extends ConsumerWidget {
     }
   }
 
+  /// Back must always land somewhere. A notification can open this screen with
+  /// nothing beneath it, and popping the last route closes the app.
+  void _leave(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/birthdays');
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final detail = ref.watch(birthdayDetailProvider(birthdayId));
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(onPressed: () => context.pop()),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leave(context);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: BackButton(onPressed: () => _leave(context)),
         actions: [
           detail.maybeWhen(
             data: (birthday) => IconButton(
@@ -218,13 +233,14 @@ class BirthdayDetailsScreen extends ConsumerWidget {
               label: const Text('Edit birthday'),
             ),
             const SizedBox(height: 10),
-            TextButton.icon(
-              onPressed: () => _delete(context, ref, birthday),
-              style: TextButton.styleFrom(foregroundColor: palette.error),
-              icon: const Icon(Icons.delete_outline, size: 18),
-              label: const Text('Delete birthday'),
-            ),
-          ],
+              TextButton.icon(
+                onPressed: () => _delete(context, ref, birthday),
+                style: TextButton.styleFrom(foregroundColor: palette.error),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('Delete birthday'),
+              ),
+            ],
+          ),
         ),
       ),
     );
