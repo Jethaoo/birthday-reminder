@@ -1,33 +1,50 @@
 # Deployment runbook
 
-Staging and production are both deployed and verified. The release bundle is signed with the upload
-keystore. The Play Console listing is not created yet.
+This runbook takes the backend to Cloudflare and produces a signed Android release. Every name and
+identifier below is a placeholder — substitute your own account's values before you deploy.
 
-## Current resources
+## Resources you need
 
-| | staging | production |
+| Resource | Staging | Production |
 | --- | --- | --- |
 | Worker | `birthday-reminder-staging` | `birthday-reminder` |
-| URL | https://birthday-reminder-staging.jpaypay17.workers.dev | https://birthday-reminder.jpaypay17.workers.dev |
-| D1 | `birthday-reminder-staging` (`287fb6d2-02a9-4c0e-8bcf-ce9464e6fdc9`) | `birthday-reminder` (`12220dcc-c1bd-441b-bf8c-fec98e1a951e`) |
-| R2 | `birthday-reminder-photos-staging` | `birthday-reminder-photos` |
-| Cron | `* * * * *` | `* * * * *` |
+| Public URL | `https://birthday-reminder-staging.YOUR-SUBDOMAIN.workers.dev` | `https://birthday-reminder.YOUR-SUBDOMAIN.workers.dev` |
+| D1 database | `birthday-reminder-staging` | `birthday-reminder` |
+| R2 bucket | `birthday-reminder-photos-staging` | `birthday-reminder-photos` |
+| Cron trigger | `* * * * *` | `* * * * *` |
 | Secrets | `JWT_SECRET`, `FCM_SERVICE_ACCOUNT` | `JWT_SECRET`, `FCM_SERVICE_ACCOUNT` |
 
-Both databases and both buckets are empty of test data; the smoke tests described below clean up
-after themselves.
+Named environments do not inherit bindings, vars or triggers, so `backend/wrangler.jsonc` repeats
+them inside each `env` block. Replace the placeholder D1 database ids and `APP_BASE_URL` values there
+with your own before the first deploy.
 
-Both environments are defined in `backend/wrangler.jsonc` under `env`. Named environments do not
-inherit bindings, vars or triggers, so each block repeats them.
+## First-time setup
+
+```bash
+cd backend
+pnpm exec wrangler login
+
+# Create the storage, then copy each database id into wrangler.jsonc.
+pnpm exec wrangler d1 create birthday-reminder-staging
+pnpm exec wrangler d1 create birthday-reminder
+pnpm exec wrangler r2 bucket create birthday-reminder-photos-staging
+pnpm exec wrangler r2 bucket create birthday-reminder-photos
+
+# Apply the schema to each database.
+pnpm exec wrangler d1 migrations apply birthday-reminder-staging --env staging --remote
+pnpm exec wrangler d1 migrations apply birthday-reminder --env production --remote
+```
+
+R2 has to be enabled on the account before bucket creation works, otherwise the API answers with
+Cloudflare error `10042`.
 
 ## Everyday commands
 
 ```bash
 cd backend
 pnpm exec wrangler deploy --env staging          # deploy staging
-pnpm exec wrangler deploy --env production       # deploy production (once approved)
-pnpm exec wrangler tail --env staging            # live logs, includes cron runs
-pnpm exec wrangler d1 migrations apply birthday-reminder-staging --env staging --remote
+pnpm exec wrangler deploy --env production       # deploy production
+pnpm exec wrangler tail --env staging            # live logs, including cron runs
 pnpm exec wrangler secret list --env staging     # names only, never values
 ```
 
@@ -43,7 +60,7 @@ printf '%s' '<value>' | pnpm exec wrangler secret put JWT_SECRET --env staging
 | Secret | Notes |
 | --- | --- |
 | `JWT_SECRET` | Signs 30-day access tokens. Generate a fresh one per environment — staging and production must not share it |
-| `FCM_SERVICE_ACCOUNT` | Firebase service-account JSON, single line. Same Firebase project for both environments is fine |
+| `FCM_SERVICE_ACCOUNT` | Firebase service-account JSON, on a single line. The same Firebase project can serve both environments |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Optional. Without them, password-reset emails are logged instead of sent |
 
 ## Updating the app for an environment
@@ -53,7 +70,7 @@ The API origin is a compile-time value:
 ```bash
 cd app
 flutter build appbundle --release \
-  --dart-define=API_BASE_URL=https://birthday-reminder-staging.jpaypay17.workers.dev \
+  --dart-define=API_BASE_URL=https://YOUR_WORKER_URL \
   --dart-define=APP_VERSION=1.0.0
 ```
 
@@ -74,30 +91,35 @@ These behave differently on Cloudflare than in local `workerd`, so they are wort
 
 ## Android release signing
 
-The upload keystore already exists:
+Create an upload keystore (once per project) and point `app/android/key.properties` at it:
 
-| | |
-| --- | --- |
-| File | `app/android/upload-keystore.jks` (gitignored) |
-| Alias | `upload` |
-| Valid | 2026-09-25 → 2054-02-10 |
-| SHA-256 | `BF:55:6B:A5:7B:65:24:16:55:8B:57:FA:0B:95:30:1C:81:21:14:41:DF:31:C5:97:A5:C4:CA:87:38:54:8D:A1` |
+```bash
+keytool -genkeypair -v -keystore app/android/upload-keystore.jks \
+  -alias upload -keyalg RSA -keysize 2048 -validity 10000
+```
 
-`app/android/key.properties` points at it and is also gitignored. `build.gradle.kts` reads that file
-when present and falls back to the debug keys when it is missing, so contributors can still build.
+```properties
+# app/android/key.properties — gitignored, never commit it
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=upload
+storeFile=upload-keystore.jks
+```
+
+`build.gradle.kts` reads that file when it exists and falls back to the debug keys when it is
+missing, so contributors can still build without the keystore.
 
 > **Back this keystore up somewhere safe.** If it is lost you cannot ship updates under the same
 > identity unless Play App Signing is enabled and you reset the upload key. It is not in git.
 
-Build the release bundle (43.7 MB, signed with the key above):
+Build the release bundle and confirm the signer before uploading:
 
 ```bash
 cd app
 flutter build appbundle --release \
-  --dart-define=API_BASE_URL=https://birthday-reminder.jpaypay17.workers.dev \
+  --dart-define=API_BASE_URL=https://YOUR_WORKER_URL \
   --dart-define=APP_VERSION=1.0.0
 
-# Confirm the signer before uploading:
 keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
 ```
 

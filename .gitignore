@@ -1,17 +1,18 @@
 # Operating system
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Editors
+# Editors and IDEs
 .idea/
 .vscode/
+*.iml
+*.swp
 
 # Node / Cloudflare Worker
 node_modules/
 dist/
 .wrangler/
-.dev.vars
-.dev.vars.*
 *.tsbuildinfo
 
 # Flutter / Dart
@@ -22,25 +23,35 @@ app/.flutter-plugins
 app/.flutter-plugins-dependencies
 app/android/.gradle/
 app/android/local.properties
-app/android/key.properties
-app/android/app/*.jks
-app/android/app/*.keystore
-*.iml
 
-# Secrets — never commit
+# Secrets — never commit.
 .env
 .env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+# The template is safe to publish; the filled-in file next to it is not.
+!.dev.vars.example
 secrets/
+*.pem
+*.key
+*.p12
 **/firebase-service-account*.json
 **/service-account*.json
 # Firebase downloads keys as <project>-firebase-adminsdk-*.json by default.
 **/*firebase-adminsdk*.json
 **/*-adminsdk-*.json
 
+# Android signing keys
+*.jks
+*.keystore
+app/android/key.properties
+
 # Firebase Android config. It carries a Google API key, which GitHub secret
 # scanning reports even though Google restricts it to this package. Each
 # checkout supplies its own — the Gradle plugin is only applied when it exists.
 app/android/app/google-services.json
+**/GoogleService-Info.plist
 
 # Logs and caches
 *.log

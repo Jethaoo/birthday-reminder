@@ -1,0 +1,10 @@
+# Copy to .dev.vars for local development. Never commit .dev.vars.
+JWT_SECRET="replace-with-a-long-random-string"
+
+# Optional: enables real FCM delivery. Without it the reminder engine records
+# notifications as sent without contacting Google.
+FCM_SERVICE_ACCOUNT='{"type":"service_account","project_id":"your-project","client_email":"firebase-adminsdk@your-project.iam.gserviceaccount.com","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"}'
+
+# Optional: enables real password reset emails.
+RESEND_API_KEY="re_xxxxxxxx"
+EMAIL_FROM="Birthday Reminder <noreply@example.com>"

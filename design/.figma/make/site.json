@@ -1,5 +1,6 @@
 {
-  "description": "Transform markdown content into visually appealing web pages, enabling users to easily create and share professional-looking documents.",
+  "title": "Birthday Reminder — V1 Design Surface",
+  "description": "Every screen, state and token of the Birthday Reminder Android app, rendered as a runnable reference for the Flutter implementation.",
   "robots": {
     "index": false
   },

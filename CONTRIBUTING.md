@@ -41,8 +41,9 @@ Pull requests are expected to keep all of these green.
 - Reminder delivery must stay idempotent. The unique `dedupe_key` on `notification_logs` is what
   makes repeated cron runs safe — do not bypass it.
 - Never commit secrets. They live in `.dev.vars` locally and in `wrangler secret` when deployed.
-- New behaviour needs a test. Two bugs that reached production shipped from gaps in coverage:
-  a screen that hydrated itself during build, and a hashing cost above the platform's PBKDF2 limit.
+- New behaviour needs a test. Watch for async hydration during build, and for work whose cost only
+  shows up on the real platform — Cloudflare caps PBKDF2 at 100,000 iterations, which local `workerd`
+  does not enforce.
 
 ## Design reference
 

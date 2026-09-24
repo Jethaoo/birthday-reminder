@@ -34,6 +34,9 @@
 
   // Deploy with `wrangler deploy --env staging` or `--env production`.
   // Named environments do not inherit bindings, vars or triggers.
+  // The D1 database ids and APP_BASE_URL values below belong to this
+  // deployment — replace them with your own before deploying to your account.
+  // See docs/deployment.md for the first-time setup.
   "env": {
     "staging": {
       "name": "birthday-reminder-staging",

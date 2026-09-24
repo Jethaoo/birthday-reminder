@@ -11,7 +11,7 @@ flutter pub get
 # Emulator talking to a Worker on the host machine:
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8787
 
-# Physical device: scripts/dev-phone.ps1 finds your LAN address and launches
+# Physical device: ../scripts/dev-phone.ps1 finds your LAN address and launches
 # the app against it.
 ```
 
