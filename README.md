@@ -82,8 +82,10 @@ real services:
 | `app/android/key.properties` and `app/android/upload-keystore.jks` | Release signing | `keytool -genkeypair` (see the deployment runbook). Without them release builds fall back to debug keys |
 | `dist/` | Built APKs | `flutter build apk --release` |
 
-`app/android/app/google-services.json` **is** committed. Google documents it as non-secret — the key
-inside is restricted to this package name — and the Android build needs it to configure Firebase.
+| `app/android/app/google-services.json` | Firebase Android config (contains a Google API key) | Firebase console → Project settings → Your apps → download it into `app/android/app/` |
+
+The Gradle plugin is applied only when that file is present, so the app builds, analyzes and tests
+without it — only push notifications need it.
 
 This repository also contains the author's own deployment identifiers: the `workers.dev` subdomain,
 the D1 database ids and the R2 bucket names in `backend/wrangler.jsonc` and the deployment runbook.

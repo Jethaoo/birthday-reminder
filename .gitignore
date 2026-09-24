@@ -37,6 +37,11 @@ secrets/
 **/*firebase-adminsdk*.json
 **/*-adminsdk-*.json
 
+# Firebase Android config. It carries a Google API key, which GitHub secret
+# scanning reports even though Google restricts it to this package. Each
+# checkout supplies its own — the Gradle plugin is only applied when it exists.
+app/android/app/google-services.json
+
 # Logs and caches
 *.log
 logs/
