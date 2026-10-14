@@ -5,6 +5,7 @@ import '../../core/api/birthday_reminder_api.dart';
 import '../../core/providers.dart';
 import '../../shared/models/birthday.dart';
 import '../../shared/models/reminder.dart';
+import '../calendar/calendar_providers.dart';
 import '../home/home_providers.dart';
 
 /// Search, filter, sort and pagination state for the Birthdays tab.
@@ -57,10 +58,22 @@ class BirthdayListController extends AsyncNotifier<BirthdayListState> {
   String _filter = 'all';
   String _sort = 'upcoming';
 
+  /// Bumped whenever the query changes, so responses for an older query
+  /// (a slow page or reload) are dropped instead of mixed into the new list.
+  int _generation = 0;
+
   @override
   Future<BirthdayListState> build() async {
-    final api = ref.watch(apiProvider);
-    final cache = ref.watch(cacheStoreProvider);
+    ref.watch(sessionUserIdProvider);
+    ref.watch(apiProvider);
+    ref.watch(cacheStoreProvider);
+    _generation++;
+    return _fetch();
+  }
+
+  Future<BirthdayListState> _fetch() async {
+    final api = ref.read(apiProvider);
+    final cache = ref.read(cacheStoreProvider);
 
     try {
       final page = await api.birthdays(
@@ -70,7 +83,8 @@ class BirthdayListController extends AsyncNotifier<BirthdayListState> {
         await cache.saveBirthdays(page.items);
       }
       return BirthdayListState(items: page.items, total: page.total, search: _search, filter: _filter, sort: _sort);
-    } on ApiException {
+    } on ApiException catch (error) {
+      if (error.isUnauthorized) rethrow;
       final cached = await cache.readBirthdays();
       if (cached != null) {
         return BirthdayListState(
@@ -87,8 +101,10 @@ class BirthdayListController extends AsyncNotifier<BirthdayListState> {
   }
 
   Future<void> _reload() async {
+    final generation = ++_generation;
     state = const AsyncLoading();
-    state = await AsyncValue.guard(build);
+    final next = await AsyncValue.guard(_fetch);
+    if (generation == _generation) state = next;
   }
 
   Future<void> setSearch(String value) async {
@@ -113,6 +129,7 @@ class BirthdayListController extends AsyncNotifier<BirthdayListState> {
     final current = state.valueOrNull;
     if (current == null || !current.hasMore || current.loadingMore) return;
 
+    final generation = _generation;
     state = AsyncData(current.copyWith(loadingMore: true));
     try {
       final page = await ref.read(apiProvider).birthdays(
@@ -124,6 +141,8 @@ class BirthdayListController extends AsyncNotifier<BirthdayListState> {
               offset: current.items.length,
             ),
           );
+      // The search, filter or sort changed while this page was loading.
+      if (generation != _generation) return;
       state = AsyncData(
         current.copyWith(
           items: [...current.items, ...page.items],
@@ -132,6 +151,7 @@ class BirthdayListController extends AsyncNotifier<BirthdayListState> {
         ),
       );
     } on ApiException {
+      if (generation != _generation) return;
       state = AsyncData(current.copyWith(loadingMore: false));
     }
   }
@@ -144,6 +164,7 @@ final birthdayListProvider =
 class BirthdayDetailController extends FamilyAsyncNotifier<Birthday, String> {
   @override
   Future<Birthday> build(String birthdayId) async {
+    ref.watch(sessionUserIdProvider);
     return ref.watch(apiProvider).birthday(birthdayId);
   }
 
@@ -189,23 +210,27 @@ class BirthdayActions {
   Future<Reminder> addReminder(String birthdayId, Reminder reminder) async {
     final created = await _api.createReminder(birthdayId, reminder);
     _ref.invalidate(birthdayDetailProvider(birthdayId));
+    _invalidateLists();
     return created;
   }
 
   Future<Reminder> updateReminder(String birthdayId, Reminder reminder) async {
     final updated = await _api.updateReminder(reminder.id, reminder);
     _ref.invalidate(birthdayDetailProvider(birthdayId));
+    _invalidateLists();
     return updated;
   }
 
   Future<void> deleteReminder(String birthdayId, String reminderId) async {
     await _api.deleteReminder(reminderId);
     _ref.invalidate(birthdayDetailProvider(birthdayId));
+    _invalidateLists();
   }
 
   void _invalidateLists() {
     _ref.invalidate(birthdayListProvider);
     _ref.invalidate(homeProvider);
+    _ref.invalidate(calendarProvider);
   }
 }
 

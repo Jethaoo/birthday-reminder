@@ -61,6 +61,30 @@ class PushService {
     }
   }
 
+  /// Asks the user for permission and reports whether notifications may be shown.
+  Future<bool> requestPermissionGranted() async {
+    if (!_available) return false;
+    try {
+      final settings = await _messaging!.requestPermission(alert: true, badge: true, sound: true);
+      return settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+    } catch (error) {
+      debugPrint('Notification permission request failed: $error');
+      return false;
+    }
+  }
+
+  /// Invalidates this device's FCM token, so a signed-out account can no longer
+  /// be reached here even if the server still holds the old token.
+  Future<void> deleteToken() async {
+    if (!_available) return;
+    try {
+      await _messaging!.deleteToken();
+    } catch (error) {
+      debugPrint('Could not delete the FCM token: $error');
+    }
+  }
+
   /// Called by FCM when the token rotates; the app re-registers the device.
   void onTokenRefresh(void Function(String token) listener) {
     if (!_available) return;

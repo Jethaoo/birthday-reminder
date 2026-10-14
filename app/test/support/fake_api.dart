@@ -53,8 +53,17 @@ class FakeApi implements BirthdayReminderApi {
   @override
   String get baseUrl => 'https://api.test';
 
+  String? authToken;
+  final List<String> unregisteredDevices = [];
+  String registeredDeviceId = 'device-1';
+
   @override
-  void setAuthToken(String? token) {}
+  void setAuthToken(String? token) => authToken = token;
+
+  @override
+  set onUnauthorized(void Function()? callback) => onUnauthorizedCallback = callback;
+
+  void Function()? onUnauthorizedCallback;
 
   @override
   String absoluteUrl(String relativePath) => '$baseUrl$relativePath';
@@ -253,8 +262,15 @@ class FakeApi implements BirthdayReminderApi {
   }
 
   @override
-  Future<void> registerDevice({required String fcmToken, String? deviceName}) async {
+  Future<String?> registerDevice({required String fcmToken, String? deviceName}) async {
     _record('registerDevice');
+    return registeredDeviceId;
+  }
+
+  @override
+  Future<void> unregisterDevice(String deviceId) async {
+    _record('unregisterDevice');
+    unregisteredDevices.add(deviceId);
   }
 
   @override

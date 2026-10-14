@@ -23,6 +23,18 @@ if (hasReleaseKeystore) {
     FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
 }
 
+// A debug-signed release can never be updated in place by a properly signed
+// one, so make the fallback impossible to miss.
+gradle.taskGraph.whenReady {
+    if (!hasReleaseKeystore && allTasks.any { it.name.contains("Release") }) {
+        logger.warn(
+            "WARNING: android/key.properties not found. This release build is signed with the " +
+                "DEBUG key: fine for personal use, but it cannot be published or later updated " +
+                "by a release-signed build. See docs/deployment.md.",
+        )
+    }
+}
+
 android {
     namespace = "com.birthdayreminder.app"
     compileSdk = flutter.compileSdkVersion

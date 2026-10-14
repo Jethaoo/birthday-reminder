@@ -59,11 +59,23 @@ class FakeSessionStore implements SessionStore {
   @override
   Future<AppUser?> readUser() async => user;
 
+  String? deviceId;
+
+  @override
+  Future<void> saveDeviceId(String deviceId) async => this.deviceId = deviceId;
+
+  @override
+  Future<String?> readDeviceId() async => deviceId;
+
   @override
   Future<void> clear() async {
     token = null;
     user = null;
+    deviceId = null;
   }
+
+  @override
+  Future<void> wipe() => clear();
 }
 
 /// Convenience factory for a birthday with sensible defaults.

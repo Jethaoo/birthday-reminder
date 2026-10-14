@@ -12,6 +12,7 @@ class CalendarController extends FamilyAsyncNotifier<CalendarMonth, String> {
     final year = int.parse(parts[0]);
     final month = int.parse(parts[1]);
 
+    ref.watch(sessionUserIdProvider);
     final api = ref.watch(apiProvider);
     final cache = ref.watch(cacheStoreProvider);
 
@@ -19,7 +20,8 @@ class CalendarController extends FamilyAsyncNotifier<CalendarMonth, String> {
       final result = await api.calendar(month: month, year: year);
       await cache.saveCalendar(result);
       return result;
-    } on ApiException {
+    } on ApiException catch (error) {
+      if (error.isUnauthorized) rethrow;
       final cached = await cache.readCalendar(year, month);
       if (cached != null) return cached;
       rethrow;

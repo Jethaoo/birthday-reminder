@@ -6,10 +6,16 @@
     <!-- Required to open the OS settings screen for contact permission denial. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- Backup is off: the offline cache holds contacts' phone numbers, emails and
+         notes, and the keystore-encrypted session cannot be restored on another
+         device anyway. Everything is re-synced from the server after sign-in. -->
     <application
         android:label="Birthday Reminder"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"

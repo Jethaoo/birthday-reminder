@@ -308,25 +308,10 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
 
         if (update == true) {
           try {
-            final merged = _buildBirthday().copyWith();
-            final saved = await actions.update(
-              Birthday(
-                id: existingId,
-                name: merged.name,
-                birthdayMonth: merged.birthdayMonth,
-                birthdayDay: merged.birthdayDay,
-                birthYear: merged.birthYear,
-                relationship: merged.relationship,
-                phone: merged.phone,
-                email: merged.email,
-                photoUrl: merged.photoUrl,
-                notes: merged.notes,
-                giftIdeas: merged.giftIdeas,
-                reminders: merged.reminders,
-                nextOccurrence: DateTime.now(),
-                daysUntil: 0,
-              ),
-            );
+            // The update replaces every field it sends, so start from the saved
+            // record and only fill in what the user entered here.
+            final existing = await ref.read(apiProvider).birthday(existingId);
+            final saved = await actions.update(existing.mergedWith(_buildBirthday()));
             if (mounted) context.go('/birthdays/${saved.id}');
             return;
           } on ApiException catch (retryError) {

@@ -8,6 +8,7 @@ import '../../shared/models/home_summary.dart';
 class HomeController extends AsyncNotifier<HomeSummary> {
   @override
   Future<HomeSummary> build() async {
+    ref.watch(sessionUserIdProvider);
     final api = ref.watch(apiProvider);
     final cache = ref.watch(cacheStoreProvider);
 
@@ -15,7 +16,9 @@ class HomeController extends AsyncNotifier<HomeSummary> {
       final summary = await api.home();
       await cache.saveHome(summary);
       return summary;
-    } on ApiException {
+    } on ApiException catch (error) {
+      // An ended session is not a reason to show the last snapshot.
+      if (error.isUnauthorized) rethrow;
       final cached = await cache.readHome();
       if (cached != null) return cached;
       rethrow;

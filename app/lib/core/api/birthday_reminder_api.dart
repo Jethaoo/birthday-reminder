@@ -75,6 +75,10 @@ abstract class BirthdayReminderApi {
 
   void setAuthToken(String? token);
 
+  /// Called when an authenticated request is rejected with 401, so the session
+  /// can be ended instead of the app quietly showing stale data.
+  set onUnauthorized(void Function()? callback);
+
   Future<AuthSession> register({
     required String name,
     required String email,
@@ -129,7 +133,11 @@ abstract class BirthdayReminderApi {
 
   Future<CalendarMonth> calendar({required int month, required int year});
 
-  Future<void> registerDevice({required String fcmToken, String? deviceName});
+  /// Registers the FCM token and returns the server's device id.
+  Future<String?> registerDevice({required String fcmToken, String? deviceName});
+
+  /// Stops notifications to this device, called on sign-out.
+  Future<void> unregisterDevice(String deviceId);
 
   Future<TestNotificationResult> sendTestNotification({String? birthdayId});
 
@@ -158,6 +166,11 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
 
   final Dio _dio;
 
+  void Function()? _onUnauthorized;
+
+  @override
+  set onUnauthorized(void Function()? callback) => _onUnauthorized = callback;
+
   @override
   void setAuthToken(String? token) {
     if (token == null || token.isEmpty) {
@@ -172,6 +185,15 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
     if (relativePath.startsWith('http')) return relativePath;
     final root = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
     return relativePath.startsWith('/') ? '$root$relativePath' : '$root/$relativePath';
+  }
+
+  /// True when [url] points at the configured backend, so the bearer token is
+  /// never sent to another host.
+  bool _isBackendUrl(String url) {
+    final target = Uri.tryParse(url);
+    final backend = Uri.tryParse(baseUrl);
+    if (target == null || backend == null) return false;
+    return target.scheme == backend.scheme && target.host == backend.host && target.port == backend.port;
   }
 
   Future<Map<String, dynamic>> _request(
@@ -199,6 +221,11 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
 
     if (status >= 200 && status < 300) return data ?? const <String, dynamic>{};
 
+    // A 401 from sign-in itself means wrong credentials, not an expired session.
+    if (status == 401 && !response.requestOptions.path.startsWith('/api/auth/')) {
+      _onUnauthorized?.call();
+    }
+
     final error = data?['error'] as Map<String, dynamic>?;
     throw ApiException(
       apiErrorCodeFrom(error?['code'] as String?),
@@ -216,7 +243,8 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
       case DioExceptionType.connectionError:
         return ApiException.network();
       default:
-        final data = error.response?.data;
+        final response = error.response;
+        final data = response?.data;
         if (data is Map<String, dynamic>) {
           final payload = data['error'] as Map<String, dynamic>?;
           if (payload != null) {
@@ -228,6 +256,9 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
             );
           }
         }
+        // The server answered, just not with our JSON (for example a Cloudflare
+        // 502 page). That is a server problem, not a missing connection.
+        if (response != null) return ApiException.server();
         return ApiException.network();
     }
   }
@@ -425,12 +456,18 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
   }
 
   @override
-  Future<void> registerDevice({required String fcmToken, String? deviceName}) async {
-    await _request('POST', '/api/devices', body: {
+  Future<String?> registerDevice({required String fcmToken, String? deviceName}) async {
+    final json = await _request('POST', '/api/devices', body: {
       'fcmToken': fcmToken,
       'platform': 'android',
       'deviceName': ?deviceName,
     });
+    return json['id'] as String?;
+  }
+
+  @override
+  Future<void> unregisterDevice(String deviceId) async {
+    await _request('DELETE', '/api/devices/$deviceId');
   }
 
   @override
@@ -458,9 +495,13 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
 
   @override
   Future<Uint8List> photoBytes(String relativeUrl) async {
+    final url = absoluteUrl(relativeUrl);
+    if (!_isBackendUrl(url)) {
+      throw ApiException(ApiErrorCode.forbidden, 'Photos can only be loaded from your server.');
+    }
     try {
       final response = await _dio.get<List<int>>(
-        absoluteUrl(relativeUrl),
+        url,
         options: Options(responseType: ResponseType.bytes),
       );
       final status = response.statusCode ?? 0;

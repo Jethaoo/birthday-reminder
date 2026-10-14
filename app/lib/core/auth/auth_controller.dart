@@ -34,15 +34,34 @@ class AuthState {
 class AuthController extends Notifier<AuthState> {
   @override
   AuthState build() {
+    // An expired or revoked token anywhere in the app ends the session, rather
+    // than leaving screens to fall back to stale cached data.
+    ref.read(apiProvider).onUnauthorized = () {
+      if (state.isSignedIn) signOut(notifyServer: false);
+    };
     Future.microtask(restore);
     return const AuthState.restoring();
   }
 
   SessionStore get _sessions => ref.read(sessionStoreProvider);
 
+  bool _signingOut = false;
+
   /// Restores a stored session and refreshes it against the API when possible.
   Future<void> restore() async {
-    final token = await _sessions.readToken();
+    String? token;
+    AppUser? cachedUser;
+    try {
+      token = await _sessions.readToken();
+      cachedUser = token == null ? null : await _sessions.readUser();
+    } catch (_) {
+      // Secure storage that cannot be decrypted (for example restored from a
+      // backup onto another device) must not leave the app stuck restoring.
+      await _sessions.wipe();
+      state = const AuthState.signedOut();
+      return;
+    }
+
     if (token == null) {
       state = const AuthState.signedOut();
       return;
@@ -50,7 +69,6 @@ class AuthController extends Notifier<AuthState> {
 
     final api = ref.read(apiProvider);
     api.setAuthToken(token);
-    final cachedUser = await _sessions.readUser();
 
     if (cachedUser != null) {
       state = AuthState(status: AuthStatus.signedIn, user: cachedUser, offline: true);
@@ -104,19 +122,37 @@ class AuthController extends Notifier<AuthState> {
     state = AuthState(status: AuthStatus.signedIn, user: user);
   }
 
+  /// Ends the session. When [notifyServer] is true the token is still valid, so
+  /// this device's push registration is removed first; it is false when the
+  /// server has already rejected the token.
   Future<void> signOut({bool notifyServer = true}) async {
-    final api = ref.read(apiProvider);
-    if (notifyServer) {
-      try {
-        await api.logout();
-      } catch (_) {
-        // Signing out locally must succeed even when the network does not.
+    if (_signingOut) return;
+    _signingOut = true;
+    try {
+      final api = ref.read(apiProvider);
+      if (notifyServer) {
+        try {
+          final deviceId = await _sessions.readDeviceId();
+          if (deviceId != null) await api.unregisterDevice(deviceId);
+        } catch (_) {
+          // The token is deleted below, so the old registration stops working anyway.
+        }
+        try {
+          await api.logout();
+        } catch (_) {
+          // Signing out locally must succeed even when the network does not.
+        }
       }
+      // A fresh FCM token for the next account; the server deactivates the old one
+      // the next time it is used.
+      await ref.read(pushServiceProvider).deleteToken();
+      api.setAuthToken(null);
+      await _sessions.clear();
+      await ref.read(cacheStoreProvider).clear();
+      state = const AuthState.signedOut();
+    } finally {
+      _signingOut = false;
     }
-    api.setAuthToken(null);
-    await _sessions.clear();
-    await ref.read(cacheStoreProvider).clear();
-    state = const AuthState.signedOut();
   }
 
   Future<void> refreshUser() async {
