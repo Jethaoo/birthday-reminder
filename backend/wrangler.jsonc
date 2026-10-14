@@ -1,6 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "birthday-reminder",
+  // The default environment is local-only; its name differs from the production
+  // worker so a bare `wrangler deploy` can never overwrite production.
+  "name": "birthday-reminder-dev",
   "main": "src/index.ts",
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -13,7 +15,7 @@
   },
   "vars": {
     "ENVIRONMENT": "development",
-    "APP_BASE_URL": "http://localhost:8443"
+    "APP_BASE_URL": "http://localhost:8787"
   },
   "d1_databases": [
     {

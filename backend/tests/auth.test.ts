@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { env } from 'cloudflare:test'
+import { exposesDebugTools, type Env } from '../src/env'
 import { signToken, verifyToken } from '../src/lib/jwt'
+import { requestPasswordReset } from '../src/services/auth-service'
 import { api, json, registerUser, uniqueEmail, uniqueIp } from './helpers'
 
 interface AuthBody {
@@ -253,7 +255,72 @@ describe('password reset', () => {
   })
 })
 
+describe('debug affordances by environment', () => {
+  const bindings = env as unknown as Env
+
+  it('only exposes debug tools in development and tests', () => {
+    expect(exposesDebugTools({ ...bindings, ENVIRONMENT: 'development' })).toBe(true)
+    expect(exposesDebugTools({ ...bindings, ENVIRONMENT: 'test' })).toBe(true)
+    for (const environment of ['staging', 'production', 'Production', '']) {
+      expect(exposesDebugTools({ ...bindings, ENVIRONMENT: environment })).toBe(false)
+    }
+  })
+
+  it('never returns the reset token from staging or production', async () => {
+    const user = await registerUser()
+    for (const environment of ['staging', 'production']) {
+      const token = await requestPasswordReset({ ...bindings, ENVIRONMENT: environment }, { email: user.email })
+      expect(token).toBeNull()
+    }
+  })
+})
+
+describe('reset page', () => {
+  it('serves the page the reset email links to, without caching or a referrer', async () => {
+    const response = await api('GET', '/reset-password?token=abc')
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('text/html')
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer')
+    expect(response.headers.get('content-security-policy')).toContain("script-src 'self'")
+    expect(await response.text()).toContain('/reset-password.js')
+  })
+
+  it('serves the page script', async () => {
+    const response = await api('GET', '/reset-password.js')
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('javascript')
+    expect(await response.text()).toContain('/api/auth/reset-password')
+  })
+})
+
 describe('rate limiting', () => {
+  it('limits sign-in attempts per account across many addresses', async () => {
+    const user = await registerUser()
+    let lastStatus = 0
+    for (let attempt = 0; attempt < 21; attempt += 1) {
+      const response = await api('POST', '/api/auth/login', {
+        body: { email: user.email, password: 'WrongPassword1' },
+        ip: uniqueIp(),
+      })
+      lastStatus = response.status
+    }
+    expect(lastStatus).toBe(429)
+  })
+
+  it('limits current-password checks on account routes', async () => {
+    const user = await registerUser()
+    let lastStatus = 0
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const response = await api('POST', '/api/me/password', {
+        token: user.token,
+        body: { currentPassword: 'WrongPassword1', password: 'NewPassword123', confirmPassword: 'NewPassword123' },
+      })
+      lastStatus = response.status
+    }
+    expect(lastStatus).toBe(429)
+  })
+
   it('blocks repeated login attempts from one client', async () => {
     const user = await registerUser()
     const ip = '203.0.113.42'

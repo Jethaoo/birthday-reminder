@@ -42,6 +42,8 @@ Cloudflare error `10042`.
 
 ```bash
 cd backend
+# Apply pending migrations before deploying code that depends on them.
+pnpm exec wrangler d1 migrations apply birthday-reminder-staging --env staging --remote
 pnpm exec wrangler deploy --env staging          # deploy staging
 pnpm exec wrangler deploy --env production       # deploy production
 pnpm exec wrangler tail --env staging            # live logs, including cron runs

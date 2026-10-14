@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import type { AppEnv } from '../env'
+import { exposesDebugTools, type AppEnv } from '../env'
 import { ApiError } from '../lib/errors'
 import { newId, nowIso } from '../lib/ids'
 import { readJsonBody } from '../lib/route-helpers'
@@ -9,10 +9,10 @@ const dev = new Hono<AppEnv>()
 
 /**
  * Development-only helper that proves push delivery end to end. It is refused
- * in production and never appears in the app's normal flows.
+ * outside local development and tests, and never appears in the app's normal flows.
  */
 dev.post('/test-notification', async (c) => {
-  if (c.env.ENVIRONMENT === 'production') {
+  if (!exposesDebugTools(c.env)) {
     throw ApiError.notFound('Endpoint not found.')
   }
 

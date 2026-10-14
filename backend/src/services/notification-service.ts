@@ -28,6 +28,20 @@ export interface PushResult {
   simulated: boolean
   /** FCM status of the last rejection, e.g. `UNREGISTERED`, for diagnostics. */
   reason?: string
+  /**
+   * True when nothing was delivered for a reason that may clear up on its own
+   * (FCM 5xx/429, a network error, a failed OAuth token exchange), so the
+   * reminder engine may try again later.
+   */
+  retryable: boolean
+}
+
+/** FCM rejections that mean the device token itself is dead. */
+function isInvalidTokenError(status: number, reason: string, errorBody: string): boolean {
+  if (status === 404 || reason === 'UNREGISTERED') return true
+  // INVALID_ARGUMENT also covers payload bugs; only a token-specific message
+  // justifies deactivating the device.
+  return reason === 'INVALID_ARGUMENT' && /registration token/i.test(errorBody)
 }
 
 interface ServiceAccount {
@@ -140,30 +154,45 @@ export async function sendPushToUser(env: Env, userId: string, message: PushMess
     .bind(userId)
     .all<DeviceRow>()
 
-  const result: PushResult = { sent: 0, failed: 0, invalidTokens: [], simulated: false }
+  const result: PushResult = { sent: 0, failed: 0, invalidTokens: [], simulated: false, retryable: false }
   if (devices.results.length === 0) return result
 
   const account = serviceAccount(env)
-  const token = account ? await accessToken(env) : null
 
   // Without credentials the engine still records the notification so local
   // development and tests exercise the full scheduling path.
   //
   // Automated tests never contact Google: `.dev.vars` is loaded by the vitest
   // Workers pool, so credentials can be present during a test run.
-  if (env.ENVIRONMENT === 'test' || !account || !token) {
+  if (env.ENVIRONMENT === 'test' || !account) {
     result.simulated = true
     result.sent = devices.results.length
     return result
   }
 
+  // Credentials are configured but unusable right now: that is a failed
+  // delivery, not a simulated one.
+  let token: string | null = null
+  try {
+    token = await accessToken(env)
+  } catch (error) {
+    console.error('fcm_token_exchange_error', { error: String(error) })
+  }
+  if (!token) {
+    result.failed = devices.results.length
+    result.reason = 'FCM_AUTH_FAILED'
+    result.retryable = true
+    return result
+  }
+
+  let transientFailures = 0
   for (const device of devices.results) {
     const channelId =
       message.channelId ?? (message.sound ? NOTIFICATION_CHANNELS.audible : NOTIFICATION_CHANNELS.silent)
 
-    const response = await fetch(
-      `https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`,
-      {
+    let response: Response
+    try {
+      response = await fetch(`https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -183,8 +212,14 @@ export async function sendPushToUser(env: Env, userId: string, message: PushMess
             },
           },
         }),
-      },
-    )
+      })
+    } catch (error) {
+      console.error('fcm_send_error', { deviceId: device.id, error: String(error) })
+      result.failed += 1
+      result.reason = 'NETWORK_ERROR'
+      transientFailures += 1
+      continue
+    }
 
     if (response.ok) {
       result.sent += 1
@@ -205,7 +240,9 @@ export async function sendPushToUser(env: Env, userId: string, message: PushMess
     console.error('fcm_send_failed', { status: response.status, deviceId: device.id, reason })
     result.reason = reason
 
-    if (response.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(errorBody)) {
+    if (response.status === 429 || response.status >= 500) {
+      transientFailures += 1
+    } else if (isInvalidTokenError(response.status, reason, errorBody)) {
       result.invalidTokens.push(device.fcm_token)
       await env.DB.prepare('UPDATE devices SET active = 0, updated_at = ? WHERE id = ?')
         .bind(nowIso(), device.id)
@@ -213,5 +250,6 @@ export async function sendPushToUser(env: Env, userId: string, message: PushMess
     }
   }
 
+  result.retryable = result.sent === 0 && transientFailures > 0
   return result
 }

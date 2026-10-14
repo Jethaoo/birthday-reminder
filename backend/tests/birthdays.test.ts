@@ -114,6 +114,46 @@ describe('creating birthdays', () => {
     ).toBe(422)
   })
 
+  it('rejects 29 February with a birth year that is not a leap year', async () => {
+    const user = await registerUser()
+    const response = await api('POST', '/api/birthdays', {
+      token: user.token,
+      body: { name: 'Not A Leap', birthdayMonth: 2, birthdayDay: 29, birthYear: 2001 },
+    })
+    expect(response.status).toBe(422)
+  })
+
+  it('saves nothing when a reminder is invalid', async () => {
+    const user = await registerUser()
+    const body = {
+      name: 'Atomic Person',
+      birthdayMonth: 9,
+      birthdayDay: 30,
+      reminders: [{ daysBefore: 7, reminderTime: '25:99' }],
+    }
+
+    expect((await api('POST', '/api/birthdays', { token: user.token, body })).status).toBe(422)
+    // A corrected retry succeeds instead of reporting a duplicate.
+    const retry = await api('POST', '/api/birthdays', {
+      token: user.token,
+      body: { ...body, reminders: [{ daysBefore: 7, reminderTime: '09:00' }] },
+    })
+    expect(retry.status).toBe(201)
+  })
+
+  it('caps the number of reminders per birthday', async () => {
+    const user = await registerUser()
+    const reminders = Array.from({ length: 11 }, (_, index) => ({
+      daysBefore: 7,
+      reminderTime: `${String(index + 8).padStart(2, '0')}:00`,
+    }))
+    const response = await api('POST', '/api/birthdays', {
+      token: user.token,
+      body: { name: 'Many Reminders', birthdayMonth: 9, birthdayDay: 30, reminders },
+    })
+    expect(response.status).toBe(422)
+  })
+
   it('reports a duplicate with the existing birthday id', async () => {
     const user = await registerUser()
     const first = await createBirthday(user, { name: 'Sarah Tan' })
@@ -273,6 +313,23 @@ describe('listing birthdays', () => {
     expect((await api('GET', '/api/birthdays?filter=whenever', { token: user.token })).status).toBe(422)
     expect((await api('GET', '/api/birthdays?sort=magic', { token: user.token })).status).toBe(422)
     expect((await api('GET', '/api/birthdays?limit=999', { token: user.token })).status).toBe(422)
+    expect((await api('GET', '/api/birthdays?date=not-a-date', { token: user.token })).status).toBe(422)
+  })
+
+  it('treats "this week" as today plus the next six days', async () => {
+    const user = await registerUser({ timezone: 'UTC' })
+    const today = localToday('UTC').iso
+    const sixDays = monthDayOf(addDaysIso(today, 6))
+    const sevenDays = monthDayOf(addDaysIso(today, 7))
+    await createBirthday(user, { name: 'Six Days', birthdayMonth: sixDays.month, birthdayDay: sixDays.day })
+    await createBirthday(user, { name: 'Seven Days', birthdayMonth: sevenDays.month, birthdayDay: sevenDays.day })
+
+    const week = await json<{ items: BirthdayBody[] }>(
+      await api('GET', '/api/birthdays?filter=this_week', { token: user.token }),
+    )
+    const names = week.items.map((item) => item.name)
+    expect(names).toContain('Six Days')
+    expect(names).not.toContain('Seven Days')
   })
 })
 

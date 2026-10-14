@@ -37,7 +37,11 @@ differs from the stored value it is updated.
 `POST /api/auth/logout` — client-side token discard, returns `200 { status: "signed_out" }`.
 
 `POST /api/auth/forgot-password` — body `{ email }`. Always `202 { status: "accepted" }` so accounts
-cannot be enumerated. Outside production the response also contains `resetToken` for local testing.
+cannot be enumerated. Only when `ENVIRONMENT` is `development` or `test` does the response also
+contain `resetToken`, for local testing; staging and production never return it.
+
+The emailed link opens `GET /reset-password?token=…`, a small page served by the Worker that
+collects the new password and calls `POST /api/auth/reset-password`.
 
 `POST /api/auth/reset-password` — body `{ token, password, confirmPassword }`. Single use, 60-minute
 expiry. Tokens issued before the change are rejected afterwards.
@@ -135,13 +139,20 @@ is stored in D1.
 ## Development only
 
 `POST /api/dev/test-notification` (body `{ birthdayId?, title?, body? }`) sends a test push to the
-caller's devices and writes a `notification_logs` row. It returns `404` when
-`ENVIRONMENT=production`.
+caller's devices and writes a `notification_logs` row. It returns `404` unless `ENVIRONMENT` is
+`development` or `test`, so it is unavailable on staging and production.
 
 ## Reminder engine
 
 The cron trigger runs every minute. For each user with enabled reminders it resolves the local date
 and time, finds reminders whose scheduled date is today and whose time has arrived, and maps them to
 `birthday_today`, `birthday_tomorrow` or `birthday_advance`. A unique `dedupe_key`
-(user + birthday + reminder + occurrence date + type) is inserted before sending, so repeated cron
-runs cannot duplicate a notification.
+(user + birthday + days before + reminder time + occurrence date + type) is inserted before sending,
+so repeated cron runs cannot duplicate a notification. The key does not include the reminder row id,
+because editing a birthday re-creates its reminder rows; an edit therefore never re-sends a reminder
+that already fired.
+
+A delivery that fails for a transient reason (FCM 5xx or 429, a network error, a failed OAuth token
+exchange) is retried after 5 minutes, up to 3 attempts in all. A row left `pending` by a run that died
+is picked up again after 15 minutes. Permanent failures, such as an account with no devices, are not
+retried. Each run handles at most 200 due notifications; any beyond that are sent on the next tick.

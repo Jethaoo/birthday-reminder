@@ -121,15 +121,24 @@ describe('dedupe keys', () => {
     birthdayId: 'birthday-1',
     name: 'Sarah Tan',
     daysBefore: 7,
+    reminderTime: '09:00',
     occurrenceDate: '2026-09-30',
     type: 'birthday_advance',
   }
 
-  it('is unique per user, birthday, reminder, occurrence and type', async () => {
+  it('is unique per user, birthday, schedule, occurrence and type', async () => {
     const first = await dedupeKeyFor(base)
     expect(first).toBe(await dedupeKeyFor({ ...base }))
     expect(first).not.toBe(await dedupeKeyFor({ ...base, occurrenceDate: '2027-09-30' }))
     expect(first).not.toBe(await dedupeKeyFor({ ...base, type: 'birthday_today' }))
     expect(first).not.toBe(await dedupeKeyFor({ ...base, userId: 'user-2' }))
+    expect(first).not.toBe(await dedupeKeyFor({ ...base, daysBefore: 3 }))
+    expect(first).not.toBe(await dedupeKeyFor({ ...base, reminderTime: '18:00' }))
+  })
+
+  it('survives the reminder row being replaced with a new id', async () => {
+    // Editing a birthday re-creates its reminder rows, so the row id changes
+    // while the schedule stays the same.
+    expect(await dedupeKeyFor({ ...base, reminderId: 'reminder-2' })).toBe(await dedupeKeyFor(base))
   })
 })

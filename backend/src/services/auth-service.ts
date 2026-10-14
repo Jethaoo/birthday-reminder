@@ -1,4 +1,4 @@
-import type { Env } from '../env'
+import { exposesDebugTools, type Env } from '../env'
 import { hashPassword, randomToken, sha256Hex, verifyPassword } from '../lib/crypto'
 import { ApiError } from '../lib/errors'
 import { newId, nowIso } from '../lib/ids'
@@ -70,14 +70,25 @@ export async function registerUser(env: Env, body: unknown): Promise<AuthResult>
   return { user: toUserDto(user), accessToken: await signToken(id, env.JWT_SECRET) }
 }
 
+let dummyHash: Promise<string> | undefined
+
+/** A real PBKDF2 hash of a random password, computed once per isolate. */
+function dummyPasswordHash(): Promise<string> {
+  dummyHash ??= hashPassword(randomToken())
+  return dummyHash
+}
+
 export async function loginUser(env: Env, body: unknown): Promise<AuthResult> {
   const input = asRecord(body)
   const email = requiredEmail(input.email)
   const password = typeof input.password === 'string' ? input.password : ''
 
   const user = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<UserRow>()
-  // The same message is returned for unknown emails and wrong passwords.
-  if (!user || !(await verifyPassword(password, user.password_hash))) {
+  // The same message is returned for unknown emails and wrong passwords, and an
+  // unknown email still pays for one PBKDF2 run so response time does not
+  // reveal whether the account exists.
+  const passwordOk = await verifyPassword(password, user?.password_hash ?? (await dummyPasswordHash()))
+  if (!user || !passwordOk) {
     throw ApiError.unauthorized('Incorrect email or password.')
   }
 
@@ -99,9 +110,9 @@ export async function loginUser(env: Env, body: unknown): Promise<AuthResult> {
  * Always resolves without revealing whether the email exists. The reset link is
  * emailed when the account is real; otherwise the request is silently ignored.
  *
- * Outside production the plaintext token is also returned so automated tests and
- * local development can complete the flow without an inbox. Production never
- * returns it.
+ * In local development and tests only, the plaintext token is also returned so the
+ * flow can be completed without an inbox. Deployed environments (staging and
+ * production) never return it.
  */
 export async function requestPasswordReset(env: Env, body: unknown): Promise<string | null> {
   const input = asRecord(body)
@@ -132,7 +143,7 @@ export async function requestPasswordReset(env: Env, body: unknown): Promise<str
     text: `Reset your password: ${resetUrl} (expires in ${RESET_TOKEN_TTL_MINUTES} minutes)`,
   })
 
-  return env.ENVIRONMENT === 'production' ? null : token
+  return exposesDebugTools(env) ? token : null
 }
 
 export async function resetPassword(env: Env, body: unknown): Promise<void> {
