@@ -22,6 +22,10 @@ cd design && pnpm exec tsc --noEmit && pnpm build
 
 Pull requests are expected to keep all of these green.
 
+Every pull request also needs an entry under `[Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md); CI
+fails the **Changelog updated** check without one. Label the PR `skip-changelog` when it changes
+nothing a user or deployer would notice (Dependabot bumps are exempt automatically).
+
 ## Branches and commits
 
 - Branch off `develop`, name it `feature/<thing>` or `fix/<thing>`, and target `develop`.
