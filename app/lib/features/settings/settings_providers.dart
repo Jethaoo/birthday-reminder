@@ -8,12 +8,14 @@ import '../../shared/models/user_settings.dart';
 class SettingsController extends AsyncNotifier<UserSettings> {
   @override
   Future<UserSettings> build() async {
+    ref.watch(sessionUserIdProvider);
     final cache = ref.watch(cacheStoreProvider);
     try {
       final settings = await ref.watch(apiProvider).settings();
       await cache.saveSettings(settings);
       return settings;
-    } on ApiException {
+    } on ApiException catch (error) {
+      if (error.isUnauthorized) rethrow;
       final cached = await cache.readSettings();
       if (cached != null) return cached;
       rethrow;

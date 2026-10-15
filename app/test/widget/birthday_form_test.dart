@@ -59,9 +59,9 @@ void main() {
     expect(api.created.single.giftIdeas, isEmpty);
   });
 
-  testWidgets('offers to update an existing duplicate', (tester) async {
+  testWidgets('offers to update an existing duplicate without losing its data', (tester) async {
     await useTallSurface(tester);
-    final api = FakeApi()
+    final api = FakeApi(birthdays: [sampleBirthday(id: 'birthday-9', notes: 'Allergic to nuts')])
       ..nextError = ApiException(
         ApiErrorCode.conflict,
         'This birthday already exists.',
@@ -89,7 +89,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(api.updated, hasLength(1));
-    expect(api.updated.single.id, 'birthday-9');
+    final merged = api.updated.single;
+    expect(merged.id, 'birthday-9');
+    // Regression: the update used to overwrite every field with the new form's
+    // mostly empty values, wiping the saved notes and gift ideas.
+    expect(merged.notes, 'Allergic to nuts');
+    expect(merged.giftIdeas, contains('Perfume'));
+    expect(merged.relationship, 'Friend');
   });
 
   testWidgets('adds gift ideas to the list', (tester) async {

@@ -164,6 +164,29 @@ class Birthday with InitialsMixin {
         createdAt: createdAt,
         updatedAt: updatedAt,
       );
+
+  /// Folds a newly entered duplicate into this existing record without losing
+  /// anything: fields the new entry leaves empty keep their saved values, gift
+  /// ideas are combined, and the saved reminders are kept unless there were none.
+  Birthday mergedWith(Birthday incoming) => Birthday(
+        id: id,
+        name: incoming.name,
+        birthdayMonth: incoming.birthdayMonth,
+        birthdayDay: incoming.birthdayDay,
+        birthYear: incoming.birthYear ?? birthYear,
+        relationship: incoming.relationship ?? relationship,
+        phone: incoming.phone ?? phone,
+        email: incoming.email ?? email,
+        photoUrl: incoming.photoUrl ?? photoUrl,
+        notes: incoming.notes ?? notes,
+        giftIdeas: [...giftIdeas, ...incoming.giftIdeas.where((idea) => !giftIdeas.contains(idea))],
+        reminders: reminders.isNotEmpty ? reminders : incoming.reminders,
+        nextOccurrence: nextOccurrence,
+        daysUntil: daysUntil,
+        turningAge: turningAge,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+      );
 }
 
 /// Lighter shape returned by the Home and Calendar endpoints.

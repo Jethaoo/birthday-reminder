@@ -13,6 +13,7 @@ class SessionStore {
 
   static const _tokenKey = 'birthday_access_token';
   static const _userKey = 'birthday_session_user';
+  static const _deviceKey = 'birthday_device_id';
 
   Future<void> save({required String token, required AppUser user}) async {
     await _storage.write(key: _tokenKey, value: token);
@@ -31,8 +32,24 @@ class SessionStore {
     }
   }
 
+  /// The server id of this device's push registration, so sign-out can remove it.
+  Future<void> saveDeviceId(String deviceId) => _storage.write(key: _deviceKey, value: deviceId);
+
+  Future<String?> readDeviceId() => _storage.read(key: _deviceKey);
+
   Future<void> clear() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _userKey);
+    await _storage.delete(key: _deviceKey);
+  }
+
+  /// Removes everything, including entries that can no longer be decrypted (for
+  /// example after a backup was restored onto a new device).
+  Future<void> wipe() async {
+    try {
+      await _storage.deleteAll();
+    } catch (_) {
+      // Nothing more can be done; the next save overwrites the entries.
+    }
   }
 }

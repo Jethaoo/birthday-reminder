@@ -12,6 +12,7 @@ import devicesRoutes from './routes/devices'
 import homeRoutes from './routes/home'
 import meRoutes from './routes/me'
 import photosRoutes from './routes/photos'
+import resetPage from './routes/reset-page'
 import settingsRoutes from './routes/settings'
 
 const app = new Hono<AppEnv>()
@@ -44,6 +45,9 @@ app.use(
 )
 
 app.get('/health', (c) => c.json({ status: 'ok', environment: c.env.ENVIRONMENT }))
+
+// Public: the page the password-reset email links to.
+app.route('/', resetPage)
 
 // Public: registration, sign-in and password reset.
 app.route('/api/auth', authRoutes)

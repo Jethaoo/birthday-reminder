@@ -4,6 +4,8 @@ import { newId, normaliseName, nowIso } from '../lib/ids'
 import {
   compareDates,
   daysBetween,
+  isLeapYear,
+  isoWeekday,
   localDateTime,
   nextOccurrence,
   parseDateString,
@@ -32,7 +34,7 @@ import {
   type ReminderRow,
   type UserRow,
 } from '../models'
-import { isUniqueViolation, replaceReminders } from './reminder-service'
+import { isUniqueViolation, replaceRemindersStatements } from './reminder-service'
 import { keyFromPhotoUrl, photoUrl, storedPhotoUrl } from './photo-service'
 
 export type BirthdayFilter =
@@ -140,7 +142,8 @@ function matchesFilter(row: BirthdayRow, daysUntil: number, occurrence: LocalDat
     case 'today':
       return daysUntil === 0
     case 'this_week':
-      return daysUntil <= 7
+      // The calendar week (Monday to Sunday) from today on, like `this_month`.
+      return daysUntil <= 7 - isoWeekday(today)
     case 'this_month':
       return occurrence.year === today.year && occurrence.month === today.month
     case 'other':
@@ -174,6 +177,9 @@ export async function listBirthdays(
   })
 
   const dateFilter = query.date ? parseDateString(query.date) : null
+  if (query.date && !dateFilter) {
+    throw ApiError.validation('Date must use YYYY-MM-DD format.', { field: 'date' })
+  }
 
   const filtered = decorated.filter(({ row, occurrence }) => {
     if (!matchesSearch(row, query.search)) return false
@@ -264,6 +270,13 @@ function parseBirthdayFields(body: unknown, existing?: BirthdayRow): BirthdayFie
     ? optionalInt(input.birthYear, 'Birth year', { min: MIN_BIRTH_YEAR, max: currentYear })
     : (existing?.birth_year ?? null)
 
+  // 29 February only exists in leap years, so a known birth year must be one.
+  if (month === 2 && day === 29 && birthYear !== null && !isLeapYear(birthYear)) {
+    throw ApiError.validation(`${birthYear} was not a leap year, so it has no 29 February.`, {
+      field: 'birthYear',
+    })
+  }
+
   return {
     name: has('name')
       ? requiredString(input.name, 'Name', { max: 120 })
@@ -296,14 +309,23 @@ export async function createBirthday(env: Env, user: UserRow, body: unknown): Pr
   const id = newId()
   const timestamp = nowIso()
 
+  // Reminders are validated before anything is written, and the birthday and
+  // its reminders are saved in one batch, so a bad reminder never leaves a
+  // half-created birthday behind.
+  const input = asRecord(body)
+  const reminderStatements =
+    Array.isArray(input.reminders) && input.reminders.length > 0
+      ? replaceRemindersStatements(env, user.id, id, input.reminders)
+      : []
+
   try {
-    await env.DB.prepare(
-      `INSERT INTO birthdays (
-         id, user_id, name, normalised_name, birthday_month, birthday_day, birth_year,
-         relationship, phone, email, photo_url, notes, gift_ideas, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-      .bind(
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO birthdays (
+           id, user_id, name, normalised_name, birthday_month, birthday_day, birth_year,
+           relationship, phone, email, photo_url, notes, gift_ideas, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
         id,
         user.id,
         fields.name,
@@ -319,16 +341,12 @@ export async function createBirthday(env: Env, user: UserRow, body: unknown): Pr
         JSON.stringify(fields.giftIdeas),
         timestamp,
         timestamp,
-      )
-      .run()
+      ),
+      ...reminderStatements,
+    ])
   } catch (error) {
     if (isUniqueViolation(error)) throw await duplicateError(env, user, fields)
     throw error
-  }
-
-  const input = asRecord(body)
-  if (Array.isArray(input.reminders) && input.reminders.length > 0) {
-    await replaceReminders(env, user.id, id, input.reminders)
   }
 
   return getBirthday(env, user, id)
@@ -349,14 +367,20 @@ export async function updateBirthday(
   const photoKey =
     asRecord(body).photoUrl === undefined ? existing.photo_url : photoKeyFor(user.id, fields.photoUrl)
 
+  // Validate the reminders first and save everything in one batch, so an
+  // invalid reminder cannot leave the birthday half-updated.
+  const input = asRecord(body)
+  const reminderStatements =
+    input.reminders !== undefined ? replaceRemindersStatements(env, user.id, birthdayId, input.reminders) : []
+
   try {
-    await env.DB.prepare(
-      `UPDATE birthdays SET
-         name = ?, normalised_name = ?, birthday_month = ?, birthday_day = ?, birth_year = ?,
-         relationship = ?, phone = ?, email = ?, photo_url = ?, notes = ?, gift_ideas = ?, updated_at = ?
-       WHERE id = ? AND user_id = ?`,
-    )
-      .bind(
+    await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE birthdays SET
+           name = ?, normalised_name = ?, birthday_month = ?, birthday_day = ?, birth_year = ?,
+           relationship = ?, phone = ?, email = ?, photo_url = ?, notes = ?, gift_ideas = ?, updated_at = ?
+         WHERE id = ? AND user_id = ?`,
+      ).bind(
         fields.name,
         normaliseName(fields.name),
         fields.birthdayMonth,
@@ -371,19 +395,30 @@ export async function updateBirthday(
         nowIso(),
         birthdayId,
         user.id,
-      )
-      .run()
+      ),
+      ...reminderStatements,
+    ])
   } catch (error) {
     if (isUniqueViolation(error)) throw await duplicateError(env, user, fields, birthdayId)
     throw error
   }
 
-  const input = asRecord(body)
-  if (input.reminders !== undefined) {
-    await replaceReminders(env, user.id, birthdayId, input.reminders)
+  // The previous photo is removed once nothing points at it any more.
+  if (existing.photo_url && existing.photo_url !== photoKey) {
+    await deletePhotoIfUnused(env, user.id, existing.photo_url)
   }
 
   return getBirthday(env, user, birthdayId)
+}
+
+/** Deletes an R2 photo unless another of the user's birthdays still uses it. */
+async function deletePhotoIfUnused(env: Env, userId: string, key: string): Promise<void> {
+  const stillUsed = await env.DB.prepare(
+    'SELECT 1 FROM birthdays WHERE user_id = ? AND photo_url = ? LIMIT 1',
+  )
+    .bind(userId, key)
+    .first()
+  if (!stillUsed) await env.PHOTOS.delete(key)
 }
 
 export async function deleteBirthday(env: Env, user: UserRow, birthdayId: string): Promise<void> {
@@ -399,7 +434,8 @@ export async function deleteBirthday(env: Env, user: UserRow, birthdayId: string
     env.DB.prepare('DELETE FROM birthdays WHERE id = ? AND user_id = ?').bind(birthdayId, user.id),
   ])
 
-  if (row.photo_url) await env.PHOTOS.delete(row.photo_url)
+  // Another birthday may share the photo; only delete it when nothing uses it.
+  if (row.photo_url) await deletePhotoIfUnused(env, user.id, row.photo_url)
 }
 
 async function duplicateError(

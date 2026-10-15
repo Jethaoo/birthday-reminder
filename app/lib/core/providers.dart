@@ -33,6 +33,13 @@ final deviceTimezoneProvider = FutureProvider<String>((ref) => deviceTimezone())
 
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(AuthController.new);
 
+/// The signed-in user's id, or null. Data providers watch this so that signing
+/// out, or another account signing in, rebuilds them instead of leaving the
+/// previous user's records on screen.
+final sessionUserIdProvider = Provider<String?>(
+  (ref) => ref.watch(authControllerProvider.select((state) => state.user?.id)),
+);
+
 /// Connectivity is only used to show the offline banner and disable writes.
 final connectivityProvider = StreamProvider<bool>((ref) {
   return Connectivity()

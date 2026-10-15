@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { AppEnv } from '../env'
 import { RATE_LIMITS } from '../lib/rate-limit'
+import { sha256Hex } from '../lib/crypto'
 import { clientKey, enforceRateLimit, readJsonBody } from '../lib/route-helpers'
 import {
   loginUser,
@@ -10,6 +11,12 @@ import {
 } from '../services/auth-service'
 
 const auth = new Hono<AppEnv>()
+
+/** Rate-limit key for the account named in a request, hashed so no email is stored. */
+async function accountKey(body: unknown): Promise<string> {
+  const email = (body as { email?: unknown } | null)?.email
+  return sha256Hex(typeof email === 'string' ? email.trim().toLowerCase() : '')
+}
 
 auth.post('/register', async (c) => {
   const body = await readJsonBody(c)
@@ -21,6 +28,7 @@ auth.post('/register', async (c) => {
 auth.post('/login', async (c) => {
   const body = await readJsonBody(c)
   await enforceRateLimit(c, 'auth:login', clientKey(c), RATE_LIMITS.auth)
+  await enforceRateLimit(c, 'auth:login-account', await accountKey(body), RATE_LIMITS.authPerAccount)
   const result = await loginUser(c.env, body)
   return c.json(result, 200)
 })

@@ -4,6 +4,9 @@ import { newId, nowIso } from '../lib/ids'
 import { reminderDaysBefore, reminderTime } from '../lib/validation'
 import { toReminderDto, type ReminderDto, type ReminderRow } from '../models'
 
+/** Every allowed day/time pairing is still reachable well within this limit. */
+export const MAX_REMINDERS_PER_BIRTHDAY = 10
+
 export interface ReminderInput {
   daysBefore: number
   reminderTime: string
@@ -58,6 +61,14 @@ export async function createReminder(
 ): Promise<ReminderDto> {
   await ensureBirthdayOwnership(env, userId, birthdayId)
   const input = parseReminderInput(body)
+  const existing = await env.DB.prepare('SELECT COUNT(*) AS count FROM reminders WHERE birthday_id = ?')
+    .bind(birthdayId)
+    .first<{ count: number }>()
+  if ((existing?.count ?? 0) >= MAX_REMINDERS_PER_BIRTHDAY) {
+    throw ApiError.validation(`A birthday can have at most ${MAX_REMINDERS_PER_BIRTHDAY} reminders.`, {
+      field: 'reminders',
+    })
+  }
   const id = newId()
   const timestamp = nowIso()
 
@@ -129,8 +140,28 @@ export async function replaceReminders(
   birthdayId: string,
   value: unknown,
 ): Promise<ReminderDto[]> {
+  await env.DB.batch(replaceRemindersStatements(env, userId, birthdayId, value))
+  return listRemindersForBirthday(env, userId, birthdayId)
+}
+
+/**
+ * Validates a full reminder set and returns the statements that replace it, so
+ * callers can run them in the same batch (one transaction) as their own writes.
+ * Throws before anything is written when the input is invalid.
+ */
+export function replaceRemindersStatements(
+  env: Env,
+  userId: string,
+  birthdayId: string,
+  value: unknown,
+): D1PreparedStatement[] {
   if (!Array.isArray(value)) {
     throw ApiError.validation('Reminders must be a list.', { field: 'reminders' })
+  }
+  if (value.length > MAX_REMINDERS_PER_BIRTHDAY) {
+    throw ApiError.validation(`A birthday can have at most ${MAX_REMINDERS_PER_BIRTHDAY} reminders.`, {
+      field: 'reminders',
+    })
   }
 
   const inputs = value.map((entry) => parseReminderInput(entry))
@@ -163,8 +194,7 @@ export async function replaceReminders(
     )
   }
 
-  await env.DB.batch(statements)
-  return listRemindersForBirthday(env, userId, birthdayId)
+  return statements
 }
 
 export function isUniqueViolation(error: unknown): boolean {

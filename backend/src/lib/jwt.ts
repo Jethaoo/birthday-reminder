@@ -66,9 +66,12 @@ export async function verifyToken(
 
   let parsedHeader: { alg?: string }
   let parsedPayload: Partial<TokenClaims>
+  let signatureBytes: Uint8Array
   try {
     parsedHeader = JSON.parse(new TextDecoder().decode(base64UrlToBytes(header))) as { alg?: string }
     parsedPayload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payload))) as Partial<TokenClaims>
+    // A malformed signature is an invalid token (401), not a server error.
+    signatureBytes = base64UrlToBytes(signature)
   } catch {
     return null
   }
@@ -77,7 +80,7 @@ export async function verifyToken(
 
   const key = await hmacKey(secret)
   const expected = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(`${header}.${payload}`)))
-  if (!timingSafeEqual(expected, base64UrlToBytes(signature))) return null
+  if (!timingSafeEqual(expected, signatureBytes)) return null
 
   const { sub, iat, exp } = parsedPayload
   if (typeof sub !== 'string' || typeof iat !== 'number' || typeof exp !== 'number') return null

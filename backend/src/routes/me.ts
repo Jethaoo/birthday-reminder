@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { AppEnv } from '../env'
-import { readJsonBody } from '../lib/route-helpers'
+import { RATE_LIMITS } from '../lib/rate-limit'
+import { enforceRateLimit, readJsonBody } from '../lib/route-helpers'
 import { toUserDto } from '../models'
 import { changePassword } from '../services/auth-service'
 import { deleteAccount, updateUser } from '../services/user-service'
@@ -16,12 +17,15 @@ me.patch('/', async (c) => {
 
 me.post('/password', async (c) => {
   const body = await readJsonBody(c)
+  // Both routes check the current password, so they share the sign-in limit.
+  await enforceRateLimit(c, 'auth:password-check', c.get('userId'), RATE_LIMITS.auth)
   await changePassword(c.env, c.get('user'), body)
   return c.json({ status: 'password_changed' })
 })
 
 me.delete('/', async (c) => {
   const body = await readJsonBody(c)
+  await enforceRateLimit(c, 'auth:password-check', c.get('userId'), RATE_LIMITS.auth)
   await deleteAccount(c.env, c.get('user'), body)
   return c.json({ status: 'account_deleted' })
 })

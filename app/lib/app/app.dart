@@ -56,7 +56,7 @@ class _PushCoordinatorState extends ConsumerState<PushCoordinator> {
 
     push.onTokenRefresh((token) {
       if (ref.read(authControllerProvider).isSignedIn) {
-        ref.read(apiProvider).registerDevice(fcmToken: token).catchError((_) {});
+        _saveRegistration(token).catchError((_) {});
       }
     });
 
@@ -95,16 +95,27 @@ class _PushCoordinatorState extends ConsumerState<PushCoordinator> {
     final push = ref.read(pushServiceProvider);
     if (!push.isAvailable) return;
 
-    await push.requestPermission();
+    // Without permission Android drops every notification, so there is nothing
+    // to register; the app asks again on the next start.
+    if (!await push.requestPermissionGranted()) {
+      _registered = false;
+      return;
+    }
     final token = await push.token();
     if (token == null) return;
 
     try {
-      await ref.read(apiProvider).registerDevice(fcmToken: token);
+      await _saveRegistration(token);
     } on ApiException {
       // Registration is retried the next time the app starts.
       _registered = false;
     }
+  }
+
+  /// Registers [token] and remembers the device id so sign-out can remove it.
+  Future<void> _saveRegistration(String token) async {
+    final deviceId = await ref.read(apiProvider).registerDevice(fcmToken: token);
+    if (deviceId != null) await ref.read(sessionStoreProvider).saveDeviceId(deviceId);
   }
 
   @override

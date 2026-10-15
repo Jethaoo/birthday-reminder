@@ -110,6 +110,12 @@ export function addDays(date: LocalDate, delta: number): LocalDate {
   }
 }
 
+/** ISO weekday: 1 is Monday, 7 is Sunday. */
+export function isoWeekday(date: LocalDate): number {
+  const weekday = new Date(toUtcMillis(date)).getUTCDay()
+  return weekday === 0 ? 7 : weekday
+}
+
 export function compareDates(a: LocalDate, b: LocalDate): number {
   return toUtcMillis(a) - toUtcMillis(b)
 }

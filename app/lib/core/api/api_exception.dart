@@ -26,6 +26,13 @@ class ApiException implements Exception {
         'No internet connection. Check your connection and try again.',
       );
 
+  /// The server answered with something other than the API's JSON, such as an
+  /// HTML 502 page from a proxy.
+  static ApiException server() => ApiException(
+        ApiErrorCode.server,
+        'The server had a problem. Try again in a moment.',
+      );
+
   bool get isUnauthorized => code == ApiErrorCode.unauthorized;
   bool get isOffline => code == ApiErrorCode.network;
 

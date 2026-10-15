@@ -53,6 +53,8 @@ export async function checkRateLimit(
 
 export const RATE_LIMITS = {
   auth: { limit: 5, windowSeconds: 600 },
+  /** Per account, across all IPs: slows distributed guessing without making lockout cheap. */
+  authPerAccount: { limit: 20, windowSeconds: 600 },
   passwordReset: { limit: 5, windowSeconds: 600 },
   birthdayWrite: { limit: 60, windowSeconds: 3600 },
   deviceWrite: { limit: 20, windowSeconds: 3600 },

@@ -12,6 +12,14 @@ Future<void> main() async {
 
   _registerBundledFontLicences();
 
+  // Release builds block plain HTTP, so a release built without
+  // --dart-define=API_BASE_URL=https://… would fail every request. Say so
+  // plainly instead of showing "no internet" on every screen.
+  if (kReleaseMode && !apiBaseUrl.startsWith('https://')) {
+    runApp(const _MisconfiguredBuildApp());
+    return;
+  }
+
   // Firebase is initialised only when credentials are present, so the app still
   // runs for contributors without google-services.json installed. This must
   // never stop the UI from starting.
@@ -28,6 +36,31 @@ Future<void> main() async {
       child: const BirthdayReminderApp(),
     ),
   );
+}
+
+class _MisconfiguredBuildApp extends StatelessWidget {
+  const _MisconfiguredBuildApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                'This build has no server address.\n\n'
+                'Rebuild it with --dart-define=API_BASE_URL=https://your-worker-url.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The OFL requires the licence to ship alongside the font software, so both

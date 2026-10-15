@@ -28,3 +28,12 @@ export type AppEnv = {
 export function isProduction(env: Env): boolean {
   return env.ENVIRONMENT === 'production'
 }
+
+/**
+ * Debug affordances (reset tokens in responses, the /api/dev routes) are
+ * allow-listed to local development and tests. Any other value, including
+ * staging, a typo or a missing var, is treated as a deployed environment.
+ */
+export function exposesDebugTools(env: Env): boolean {
+  return env.ENVIRONMENT === 'development' || env.ENVIRONMENT === 'test'
+}

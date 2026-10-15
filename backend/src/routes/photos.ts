@@ -3,12 +3,21 @@ import type { AppEnv } from '../env'
 import { ApiError } from '../lib/errors'
 import { RATE_LIMITS } from '../lib/rate-limit'
 import { enforceRateLimit } from '../lib/route-helpers'
-import { deletePhoto, readPhoto, uploadPhoto } from '../services/photo-service'
+import { deletePhoto, MAX_PHOTO_BYTES, readPhoto, uploadPhoto } from '../services/photo-service'
 
 const photos = new Hono<AppEnv>()
 
+const MULTIPART_OVERHEAD_BYTES = 16 * 1024
+
 photos.post('/', async (c) => {
   await enforceRateLimit(c, 'photo:write', c.get('userId'), RATE_LIMITS.photoWrite)
+
+  // Refuse oversized uploads before the body is buffered. The multipart
+  // envelope adds a little on top of the file, hence the small allowance.
+  const declaredLength = Number(c.req.header('content-length'))
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_PHOTO_BYTES + MULTIPART_OVERHEAD_BYTES) {
+    throw new ApiError('PAYLOAD_TOO_LARGE', 'Photos must be 5 MB or smaller.')
+  }
 
   let form: FormData
   try {
@@ -37,6 +46,7 @@ photos.get('/*', async (c) => {
     headers: {
       'Content-Type': photo.contentType,
       'Cache-Control': 'private, max-age=3600',
+      'X-Content-Type-Options': 'nosniff',
     },
   })
 })

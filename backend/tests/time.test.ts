@@ -6,6 +6,7 @@ import {
   isLeapYear,
   isValidMonthDay,
   isValidTimeZone,
+  isoWeekday,
   localDateTime,
   nextOccurrence,
   parseDateString,
@@ -93,5 +94,13 @@ describe('next occurrence', () => {
 
   it('returns a null age when the birth year is unknown', () => {
     expect(nextOccurrence(9, 30, today, null).turningAge).toBeNull()
+  })
+})
+
+describe('isoWeekday', () => {
+  it('numbers Monday as 1 and Sunday as 7', () => {
+    expect(isoWeekday({ year: 2026, month: 10, day: 12 })).toBe(1)
+    expect(isoWeekday({ year: 2026, month: 10, day: 15 })).toBe(4)
+    expect(isoWeekday({ year: 2026, month: 10, day: 18 })).toBe(7)
   })
 })

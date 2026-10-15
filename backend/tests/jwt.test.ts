@@ -22,6 +22,12 @@ describe('jwt', () => {
     expect(await verifyToken(token, SECRET)).toBeNull()
   })
 
+  it('rejects a signature that is not valid base64url instead of throwing', async () => {
+    const token = await signToken('user-1', SECRET)
+    const [header, payload] = token.split('.')
+    expect(await verifyToken(`${header}.${payload}.*`, SECRET)).toBeNull()
+  })
+
   it('rejects a tampered payload', async () => {
     const token = await signToken('user-1', SECRET)
     const [header, , signature] = token.split('.')
