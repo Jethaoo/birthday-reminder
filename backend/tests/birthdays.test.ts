@@ -273,7 +273,7 @@ describe('listing birthdays', () => {
     const week = await json<{ items: BirthdayBody[] }>(
       await api('GET', '/api/birthdays?filter=this_week', { token: user.token }),
     )
-    expect(week.items.map((item) => item.name)).toContain('Soon Person')
+    expect(week.items.map((item) => item.name)).toContain('Today Person')
 
     const colleagues = await json<{ items: BirthdayBody[] }>(
       await api('GET', '/api/birthdays?filter=colleague', { token: user.token }),
@@ -316,20 +316,22 @@ describe('listing birthdays', () => {
     expect((await api('GET', '/api/birthdays?date=not-a-date', { token: user.token })).status).toBe(422)
   })
 
-  it('treats "this week" as today plus the next six days', async () => {
+  it('treats "this week" as today through Sunday', async () => {
     const user = await registerUser({ timezone: 'UTC' })
     const today = localToday('UTC').iso
-    const sixDays = monthDayOf(addDaysIso(today, 6))
-    const sevenDays = monthDayOf(addDaysIso(today, 7))
-    await createBirthday(user, { name: 'Six Days', birthdayMonth: sixDays.month, birthdayDay: sixDays.day })
-    await createBirthday(user, { name: 'Seven Days', birthdayMonth: sevenDays.month, birthdayDay: sevenDays.day })
+    const [year, month, day] = today.split('-').map(Number) as [number, number, number]
+    const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay() || 7
+    const sunday = monthDayOf(addDaysIso(today, 7 - weekday))
+    const nextMonday = monthDayOf(addDaysIso(today, 8 - weekday))
+    await createBirthday(user, { name: 'Sunday', birthdayMonth: sunday.month, birthdayDay: sunday.day })
+    await createBirthday(user, { name: 'Next Monday', birthdayMonth: nextMonday.month, birthdayDay: nextMonday.day })
 
     const week = await json<{ items: BirthdayBody[] }>(
       await api('GET', '/api/birthdays?filter=this_week', { token: user.token }),
     )
     const names = week.items.map((item) => item.name)
-    expect(names).toContain('Six Days')
-    expect(names).not.toContain('Seven Days')
+    expect(names).toContain('Sunday')
+    expect(names).not.toContain('Next Monday')
   })
 })
 

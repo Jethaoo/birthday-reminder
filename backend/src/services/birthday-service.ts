@@ -5,6 +5,7 @@ import {
   compareDates,
   daysBetween,
   isLeapYear,
+  isoWeekday,
   localDateTime,
   nextOccurrence,
   parseDateString,
@@ -141,8 +142,8 @@ function matchesFilter(row: BirthdayRow, daysUntil: number, occurrence: LocalDat
     case 'today':
       return daysUntil === 0
     case 'this_week':
-      // Today plus the next six days: seven days in all.
-      return daysUntil < 7
+      // The calendar week (Monday to Sunday) from today on, like `this_month`.
+      return daysUntil <= 7 - isoWeekday(today)
     case 'this_month':
       return occurrence.year === today.year && occurrence.month === today.month
     case 'other':

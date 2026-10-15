@@ -86,6 +86,8 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
 
 ### Changed
 
+- **backend:** The "this week" filter now covers the calendar week (today through Sunday) instead
+  of the next seven days, matching how "this month" uses the calendar month.
 - **backend:** A birthday can have at most 10 reminders.
 - **backend:** The reminder engine handles at most 200 due notifications per run; the rest are sent
   on the next tick.

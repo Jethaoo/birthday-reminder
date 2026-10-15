@@ -83,6 +83,8 @@ expiry. Tokens issued before the change are rejected afterwards.
 | `DELETE` | `/api/birthdays/:id` | Removes the birthday, its reminders, its notification logs and its photo |
 
 Filters: `all`, `today`, `this_week`, `this_month`, `family`, `friend`, `colleague`, `other`.
+`this_week` is the calendar week (Monday to Sunday) and `this_month` the calendar month, both in
+the user's timezone and counting only birthdays from today on.
 Sorts: `upcoming` (default), `name`, `recently_added`.
 
 A duplicate (same user, normalised name and date) returns `409` with
