@@ -40,6 +40,18 @@ String countdownLabel(int daysUntil) {
   return '${daysUntil.abs()} days ago';
 }
 
+/// [countdownLabel] as a sentence for the detail screen's status pill: `Today`,
+/// `Tomorrow`, `7 days left`, `3 days ago`.
+///
+/// Kept apart from [countdownLabel] so the list tile's bare "Tomorrow" and the
+/// pill's sentence can never drift back out of step.
+String countdownSentence(int daysUntil) {
+  if (daysUntil == 0) return 'Today';
+  if (daysUntil == 1) return 'Tomorrow';
+  if (daysUntil > 1) return '$daysUntil days left';
+  return '${daysUntil.abs()} days ago';
+}
+
 /// `09:00` rendered as `9:00 AM`.
 String formatReminderTime(String hhmm) {
   final parts = hhmm.split(':');

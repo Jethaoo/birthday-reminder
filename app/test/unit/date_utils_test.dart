@@ -9,6 +9,13 @@ void main() {
       expect(countdownLabel(7), '7 days');
       expect(countdownLabel(-3), '3 days ago');
     });
+
+    test('phrases the detail pill as a sentence', () {
+      expect(countdownSentence(0), 'Today');
+      expect(countdownSentence(1), 'Tomorrow');
+      expect(countdownSentence(7), '7 days left');
+      expect(countdownSentence(-3), '3 days ago');
+    });
   });
 
   group('date formatting', () {

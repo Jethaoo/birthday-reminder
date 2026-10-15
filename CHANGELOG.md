@@ -83,6 +83,14 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
 - **app:** Changing the search, filter or sort while the next page of birthdays was loading could
   append results from the old query to the new list.
 - **app:** The device was registered for push even when the notification permission was denied.
+- **app:** A birthday that falls tomorrow was labelled "🎂 Tomorrow left" on its detail screen
+  (and a past one "🎂 3 days ago left") where the birthday list said "Tomorrow". Both now come
+  from one helper, so the two surfaces cannot disagree again.
+- **app:** The app could keep showing the data it last fetched — including a cached fallback taken
+  while offline — until the user pulled to refresh by hand. The dashboard, birthday list and
+  calendar now revalidate when the app returns to the foreground or the connection comes back,
+  in place, so nothing on screen is emptied or replaced by a spinner. The offline banner now says
+  which time the data it is showing was fetched at.
 
 ### Added
 
@@ -91,6 +99,10 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
   from the device's own date using the backend's rules, so the numbers stay right overnight without
   the widget holding a token or making a request. The snapshot is deleted on sign-out, so a
   signed-out account's contacts leave the home screen.
+- **app:** The actions that used to sit at the end of a long scroll — Save and Import on the add/edit
+  birthday screen, Edit and Delete on a birthday's detail screen — are pinned to the bottom of the
+  screen, above the system inset, so they are reachable without scrolling. "Import from contacts" is
+  no longer offered while editing an existing birthday.
 
 ### Changed
 

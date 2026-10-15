@@ -15,6 +15,16 @@ class OfflineBanner extends ConsumerWidget {
     final offline = connectivity.maybeWhen(data: (online) => !online, orElse: () => false);
     if (!offline) return const SizedBox.shrink();
 
+    // The screens fall back to cached data, so say how old it is rather than
+    // letting it pass for current.
+    final syncedAt = ref.watch(lastSyncedProvider).valueOrNull;
+    final message = syncedAt == null
+        ? 'No connection. Showing the last data this phone saved.'
+        : 'No connection. Showing data from ${MaterialLocalizations.of(context).formatTimeOfDay(
+            TimeOfDay.fromDateTime(syncedAt),
+            alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+          )}.';
+
     final palette = paletteOf(context);
     return Container(
       width: double.infinity,
@@ -26,7 +36,7 @@ class OfflineBanner extends ConsumerWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'You are offline. Changes are disabled until you reconnect.',
+              message,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: palette.accentText),
             ),
           ),

@@ -27,6 +27,12 @@ final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
 
 final cacheStoreProvider = Provider<CacheStore>((ref) => CacheStore());
 
+/// When the app last wrote fresh data to the cache. The offline banner reads it
+/// so a cached screen says how old it is instead of looking current.
+final lastSyncedProvider = FutureProvider<DateTime?>(
+  (ref) => ref.watch(cacheStoreProvider).lastSyncedAt(),
+);
+
 final pushServiceProvider = Provider<PushService>((ref) => PushService());
 
 /// Overridden in tests (and on platforms without widgets) with a fake.

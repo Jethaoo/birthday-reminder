@@ -49,4 +49,27 @@ void main() {
 
     expect(find.text('STUB /birthdays'), findsOneWidget);
   });
+
+  testWidgets('says Tomorrow rather than Tomorrow left, with the actions pinned', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(430, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = FakeApi(birthdays: [sampleBirthday(id: 'birthday-1', daysUntil: 1)]);
+
+    await tester.pumpWidget(
+      wrapWithRouter(
+        const BirthdayDetailsScreen(birthdayId: 'birthday-1'),
+        api: api,
+        auth: signedInState,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Regression: the pill built its sentence by hand, so a birthday tomorrow
+    // read "Tomorrow left" (and a past one "3 days ago left").
+    expect(find.text('🎂 Tomorrow'), findsOneWidget);
+    expect(find.textContaining('Tomorrow left'), findsNothing);
+    expect(find.widgetWithText(OutlinedButton, 'Edit birthday').hitTestable(), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Delete').hitTestable(), findsOneWidget);
+  });
 }

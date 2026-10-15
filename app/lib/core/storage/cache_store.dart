@@ -23,7 +23,7 @@ class CacheStore {
   Future<void> saveHome(HomeSummary summary) async {
     final prefs = await _prefs;
     await prefs.setString(_homeKey, jsonEncode(summary.toJson()));
-    await prefs.setString(_syncedAtKey, DateTime.now().toIso8601String());
+    await markSynced();
   }
 
   Future<HomeSummary?> readHome() async {
@@ -43,7 +43,7 @@ class CacheStore {
       _birthdaysKey,
       jsonEncode(birthdays.map((birthday) => birthday.toJson()).toList()),
     );
-    await prefs.setString(_syncedAtKey, DateTime.now().toIso8601String());
+    await markSynced();
   }
 
   Future<List<Birthday>?> readBirthdays() async {
@@ -62,6 +62,7 @@ class CacheStore {
   Future<void> saveCalendar(CalendarMonth month) async {
     final prefs = await _prefs;
     await prefs.setString('cache_calendar_${month.year}_${month.month}', jsonEncode(month.toJson()));
+    await markSynced();
   }
 
   Future<CalendarMonth?> readCalendar(int year, int month) async {
@@ -79,6 +80,7 @@ class CacheStore {
     final prefs = await _prefs;
     await prefs.setString(_settingsKey, jsonEncode(settings.toJson()));
     await prefs.setString(_themeKey, settings.themeMode.name);
+    await markSynced();
   }
 
   Future<UserSettings?> readSettings() async {
@@ -106,6 +108,13 @@ class CacheStore {
     final prefs = await _prefs;
     final raw = prefs.getString(_syncedAtKey);
     return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  /// Records that the app just heard from the server. The offline banner reads
+  /// it back, so cached data is never presented as if it were current.
+  Future<void> markSynced([DateTime? at]) async {
+    final prefs = await _prefs;
+    await prefs.setString(_syncedAtKey, (at ?? DateTime.now()).toIso8601String());
   }
 
   Future<void> clear() async {

@@ -9,16 +9,26 @@ class CalendarController extends FamilyAsyncNotifier<CalendarMonth, String> {
   @override
   Future<CalendarMonth> build(String key) async {
     final parts = key.split('-');
-    final year = int.parse(parts[0]);
-    final month = int.parse(parts[1]);
-
     ref.watch(sessionUserIdProvider);
-    final api = ref.watch(apiProvider);
-    final cache = ref.watch(cacheStoreProvider);
+    ref.watch(apiProvider);
+    ref.watch(cacheStoreProvider);
+    return _load(int.parse(parts[0]), int.parse(parts[1]));
+  }
 
+  /// Refreshes in place for the foreground and reconnect refresh.
+  Future<void> revalidate() async {
+    final parts = arg.split('-');
+    final next = await AsyncValue.guard(() => _load(int.parse(parts[0]), int.parse(parts[1])));
+    if (next.hasValue) state = next;
+  }
+
+  Future<CalendarMonth> _load(int year, int month) async {
+    final api = ref.read(apiProvider);
+    final cache = ref.read(cacheStoreProvider);
     try {
       final result = await api.calendar(month: month, year: year);
       await cache.saveCalendar(result);
+      ref.invalidate(lastSyncedProvider);
       return result;
     } on ApiException catch (error) {
       if (error.isUnauthorized) rethrow;

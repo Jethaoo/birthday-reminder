@@ -13,6 +13,7 @@ class SettingsController extends AsyncNotifier<UserSettings> {
     try {
       final settings = await ref.watch(apiProvider).settings();
       await cache.saveSettings(settings);
+      ref.invalidate(lastSyncedProvider);
       return settings;
     } on ApiException catch (error) {
       if (error.isUnauthorized) rethrow;

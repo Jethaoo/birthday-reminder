@@ -172,4 +172,38 @@ void main() {
     expect(api.updated.single.name, 'Sarah Tan-Lim');
     expect(api.created, isEmpty);
   });
+
+  testWidgets('pins Save so a long form needs no scrolling to reach it', (tester) async {
+    // Phone height: the form itself is far taller than this.
+    await tester.binding.setSurfaceSize(const Size(430, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = FakeApi();
+
+    await tester.pumpWidget(
+      wrapWithRouter(const BirthdayFormScreen(), api: api, auth: signedInState),
+    );
+    await tester.pump();
+
+    // Regression: both actions used to be the last children of the scrolling
+    // list, so reaching them meant scrolling past every field.
+    expect(find.widgetWithText(FilledButton, 'Save birthday').hitTestable(), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Import').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('editing offers no import from contacts', (tester) async {
+    final api = FakeApi(birthdays: [sampleBirthday(id: 'birthday-1', name: 'Sarah Tan')]);
+
+    await tester.pumpWidget(
+      wrapWithRouter(
+        const BirthdayFormScreen(birthdayId: 'birthday-1'),
+        api: api,
+        auth: signedInState,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.widgetWithText(FilledButton, 'Save changes'), findsOneWidget);
+    expect(find.text('Import'), findsNothing);
+  });
 }
