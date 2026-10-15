@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
@@ -15,6 +17,14 @@ class HomeController extends AsyncNotifier<HomeSummary> {
     try {
       final summary = await api.home();
       await cache.saveHome(summary);
+      // Keep the home screen widgets on the same data the dashboard is showing.
+      // Not awaited: the dashboard should never wait on a launcher.
+      unawaited(
+        ref.read(widgetSyncProvider).publish(
+              summary,
+              timezone: ref.read(authControllerProvider).user?.timezone ?? '',
+            ),
+      );
       return summary;
     } on ApiException catch (error) {
       // An ended session is not a reason to show the last snapshot.

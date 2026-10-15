@@ -8,6 +8,7 @@ import '../core/providers.dart';
 import '../shared/models/user_settings.dart';
 import 'router.dart';
 import 'theme.dart';
+import 'widget_coordinator.dart';
 
 final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -31,7 +32,9 @@ class BirthdayReminderApp extends ConsumerWidget {
         AppThemeMode.system => ThemeMode.system,
       },
       routerConfig: router,
-      builder: (context, child) => PushCoordinator(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => PushCoordinator(
+        child: WidgetCoordinator(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }
@@ -46,12 +49,15 @@ class PushCoordinator extends ConsumerStatefulWidget {
   ConsumerState<PushCoordinator> createState() => _PushCoordinatorState();
 }
 
-class _PushCoordinatorState extends ConsumerState<PushCoordinator> {
+class _PushCoordinatorState extends ConsumerState<PushCoordinator> with WidgetsBindingObserver {
+  /// Only true once the server has accepted this device's current token.
   bool _registered = false;
+  bool _registering = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final push = ref.read(pushServiceProvider);
 
     push.onTokenRefresh((token) {
@@ -88,27 +94,51 @@ class _PushCoordinatorState extends ConsumerState<PushCoordinator> {
     });
   }
 
-  Future<void> _registerDevice() async {
-    if (_registered) return;
-    _registered = true;
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
-    final push = ref.read(pushServiceProvider);
-    if (!push.isAvailable) return;
-
-    // Without permission Android drops every notification, so there is nothing
-    // to register; the app asks again on the next start.
-    if (!await push.requestPermissionGranted()) {
-      _registered = false;
-      return;
+  /// A token can go stale while the app is alive (app data cleared, the Firebase
+  /// key rotated, FCM rotating the token). Re-checking on resume means a device
+  /// that stopped being reachable heals itself instead of staying silent until
+  /// the process restarts.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && ref.read(authControllerProvider).isSignedIn) {
+      // Fire and forget: the next resume retries, so a failure here must not
+      // surface as an unhandled async error.
+      _registerDevice().catchError((_) {});
     }
-    final token = await push.token();
-    if (token == null) return;
+  }
 
+  Future<void> _registerDevice() async {
+    if (_registered || _registering) return;
+    _registering = true;
     try {
-      await _saveRegistration(token);
-    } on ApiException {
-      // Registration is retried the next time the app starts.
-      _registered = false;
+      final push = ref.read(pushServiceProvider);
+      // Firebase may not be configured in this build; a later resume retries.
+      if (!push.isAvailable) return;
+
+      // Without permission Android drops every notification, so there is nothing
+      // to register; the app asks again on the next start.
+      if (!await push.requestPermissionGranted()) {
+        _registered = false;
+        return;
+      }
+      final token = await push.token();
+      if (token == null) return;
+
+      try {
+        await _saveRegistration(token);
+        _registered = true;
+      } on ApiException {
+        // Registration is retried the next time the app starts.
+        _registered = false;
+      }
+    } finally {
+      _registering = false;
     }
   }
 

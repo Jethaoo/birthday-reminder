@@ -29,18 +29,25 @@ flutter build appbundle --release \
 ```text
 lib/
 ├── app/        theme tokens, router and app shell
-├── core/       API client, session, push, cache, utilities
+├── core/       API client, session, push, cache, home screen widgets, utilities
 ├── features/   auth, home, birthdays, calendar, contacts, settings, shell
 └── shared/     models and reusable widgets
 ```
 
 `assets/fonts` bundles DM Sans and Fraunces so typography never depends on a runtime download.
 
+The home screen widgets are native Glance layouts under `android/app/src/main/kotlin/.../widget`.
+They draw from a snapshot of Home that `core/widgets` publishes, never from the API directly; see
+[docs/widgets.md](../docs/widgets.md).
+
 ## Checks
 
 ```bash
 flutter analyze
 flutter test
+
+# The widget's countdown maths and snapshot parsing are plain JVM tests.
+cd android && ./gradlew :app:testDebugUnitTest
 ```
 
 ## Release signing

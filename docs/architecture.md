@@ -24,6 +24,9 @@ Cloudflare Worker  ──  REST API, auth, validation, ownership checks
   the user's sound preference.
 - Dates are stored as month/day (plus optional year); the next occurrence and countdown are computed
   per request in the user's timezone.
+- The home screen widgets are fed by a snapshot the app writes once Home has loaded, and recompute the
+  countdown from the device's date themselves: no token and no network in the widget process. See
+  [Home screen widgets](widgets.md).
 
 ## Layers
 

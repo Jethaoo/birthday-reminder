@@ -84,6 +84,14 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
   append results from the old query to the new list.
 - **app:** The device was registered for push even when the notification permission was denied.
 
+### Added
+
+- **app:** Three Android home screen widgets: the next birthday, the next three, and today plus
+  next. Home publishes a small snapshot of names and dates, and each widget recomputes the countdown
+  from the device's own date using the backend's rules, so the numbers stay right overnight without
+  the widget holding a token or making a request. The snapshot is deleted on sign-out, so a
+  signed-out account's contacts leave the home screen.
+
 ### Changed
 
 - **backend:** The "this week" filter now covers the calendar week (today through Sunday) instead
