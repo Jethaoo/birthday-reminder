@@ -8,6 +8,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../shared/models/birthday.dart';
 import '../../../shared/models/reminder.dart';
+import '../../../shared/widgets/bottom_action_bar.dart';
 import '../../../shared/widgets/dialogs.dart';
 import '../../../shared/widgets/person_avatar.dart';
 import '../../../shared/widgets/states.dart';
@@ -118,9 +119,7 @@ class BirthdayDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   StatusPill(
-                    label: birthday.daysUntil == 0
-                        ? '🎂 Today'
-                        : '🎂 ${countdownLabel(birthday.daysUntil)} left',
+                    label: '🎂 ${countdownSentence(birthday.daysUntil)}',
                   ),
                 ],
               ),
@@ -226,21 +225,25 @@ class BirthdayDetailsScreen extends ConsumerWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 22),
-            OutlinedButton.icon(
+            ],
+          ),
+        ),
+        // Pinned, so the actions never depend on how far the user scrolled.
+        bottomNavigationBar: detail.maybeWhen(
+          data: (birthday) => BottomActionBar(
+            primary: OutlinedButton.icon(
               onPressed: () => context.push('/birthdays/${birthday.id}/edit'),
               icon: const Icon(Icons.edit_outlined, size: 18),
               label: const Text('Edit birthday'),
             ),
-            const SizedBox(height: 10),
-              TextButton.icon(
-                onPressed: () => _delete(context, ref, birthday),
-                style: TextButton.styleFrom(foregroundColor: palette.error),
-                icon: const Icon(Icons.delete_outline, size: 18),
-                label: const Text('Delete birthday'),
-              ),
-            ],
+            secondary: TextButton.icon(
+              onPressed: () => _delete(context, ref, birthday),
+              style: TextButton.styleFrom(foregroundColor: palette.error),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text('Delete'),
+            ),
           ),
+          orElse: () => null,
         ),
       ),
     );

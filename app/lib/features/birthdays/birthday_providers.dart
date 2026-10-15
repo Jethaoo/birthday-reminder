@@ -81,6 +81,7 @@ class BirthdayListController extends AsyncNotifier<BirthdayListState> {
       );
       if (_search.isEmpty && _filter == 'all' && _sort == 'upcoming') {
         await cache.saveBirthdays(page.items);
+        ref.invalidate(lastSyncedProvider);
       }
       return BirthdayListState(items: page.items, total: page.total, search: _search, filter: _filter, sort: _sort);
     } on ApiException catch (error) {
@@ -123,6 +124,17 @@ class BirthdayListController extends AsyncNotifier<BirthdayListState> {
   }
 
   Future<void> refresh() => _reload();
+
+  /// Refreshes the current query without emptying the list first, for the
+  /// foreground and reconnect refresh. A failed attempt leaves what is on screen
+  /// alone: the offline banner explains why it may be old.
+  Future<void> revalidate() async {
+    final generation = _generation;
+    final next = await AsyncValue.guard(_fetch);
+    // The search, filter or sort changed while this was in flight.
+    if (generation != _generation) return;
+    if (next.hasValue) state = next;
+  }
 
   /// Loads the next page and appends it to the current list.
   Future<void> loadMore() async {

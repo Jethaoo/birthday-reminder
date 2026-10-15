@@ -11,12 +11,26 @@ class HomeController extends AsyncNotifier<HomeSummary> {
   @override
   Future<HomeSummary> build() async {
     ref.watch(sessionUserIdProvider);
-    final api = ref.watch(apiProvider);
-    final cache = ref.watch(cacheStoreProvider);
+    ref.watch(apiProvider);
+    ref.watch(cacheStoreProvider);
+    return _load();
+  }
 
+  /// Refreshes in place for a foreground or reconnect refresh: the dashboard
+  /// keeps what it has until the server answers, so a background refresh never
+  /// flashes a skeleton — or an error — over what the user is reading.
+  Future<void> revalidate() async {
+    final next = await AsyncValue.guard(_load);
+    if (next.hasValue) state = next;
+  }
+
+  Future<HomeSummary> _load() async {
+    final api = ref.read(apiProvider);
+    final cache = ref.read(cacheStoreProvider);
     try {
       final summary = await api.home();
       await cache.saveHome(summary);
+      ref.invalidate(lastSyncedProvider);
       // Keep the home screen widgets on the same data the dashboard is showing.
       // Not awaited: the dashboard should never wait on a launcher.
       unawaited(

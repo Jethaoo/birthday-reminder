@@ -13,6 +13,7 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/models/birthday.dart';
 import '../../../shared/models/reminder.dart';
+import '../../../shared/widgets/bottom_action_bar.dart';
 import '../../../shared/widgets/person_avatar.dart';
 import '../../../shared/widgets/states.dart';
 import '../birthday_providers.dart';
@@ -572,21 +573,30 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                 label: const Text('Add another reminder'),
               ),
             ],
-            const SizedBox(height: 26),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text(_isEditing ? 'Save changes' : 'Save birthday'),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: () => context.push('/contacts'),
-              icon: const Icon(Icons.contacts_outlined, size: 18),
-              label: const Text('Import from contacts'),
-            ),
           ],
         ),
+      ),
+      // Pinned, so Save stays reachable however long the form gets.
+      bottomNavigationBar: BottomActionBar(
+        primary: FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(_isEditing ? 'Save changes' : 'Save birthday'),
+        ),
+        // Importing a contact only makes sense for a birthday that does not
+        // exist yet.
+        secondary: _isEditing
+            ? null
+            : Semantics(
+                label: 'Import from contacts',
+                button: true,
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push('/contacts'),
+                  icon: const Icon(Icons.contacts_outlined, size: 18),
+                  label: const Text('Import'),
+                ),
+              ),
       ),
     );
   }

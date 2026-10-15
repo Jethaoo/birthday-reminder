@@ -6,6 +6,7 @@ import '../core/auth/auth_controller.dart';
 import '../core/notifications/push_service.dart';
 import '../core/providers.dart';
 import '../shared/models/user_settings.dart';
+import 'data_refresh_coordinator.dart';
 import 'router.dart';
 import 'theme.dart';
 import 'widget_coordinator.dart';
@@ -33,7 +34,9 @@ class BirthdayReminderApp extends ConsumerWidget {
       },
       routerConfig: router,
       builder: (context, child) => PushCoordinator(
-        child: WidgetCoordinator(child: child ?? const SizedBox.shrink()),
+        child: WidgetCoordinator(
+          child: DataRefreshCoordinator(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     );
   }
