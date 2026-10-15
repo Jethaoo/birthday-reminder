@@ -4,4 +4,33 @@
     <string name="notification_channel_audible_description">Advance reminders, tomorrow reminders and birthday-day notifications</string>
     <string name="notification_channel_silent">Birthday reminders (silent)</string>
     <string name="notification_channel_silent_description">Reminders delivered without sound</string>
+
+    <!-- Home screen widgets. The label and description are what the launcher's
+         widget picker shows, so the three layouts stay distinguishable. -->
+    <string name="widget_next_birthday_label">Next birthday</string>
+    <string name="widget_next_birthday_description">A countdown to the next birthday</string>
+    <string name="widget_next_birthdays_label">Next 3 birthdays</string>
+    <string name="widget_next_birthdays_description">The three nearest birthdays, in order</string>
+    <string name="widget_today_and_next_label">Today &amp; next</string>
+    <string name="widget_today_and_next_description">Today’s birthdays and the next one coming up</string>
+
+    <string name="widget_heading_next">NEXT BIRTHDAY</string>
+    <string name="widget_heading_coming_up">Coming up</string>
+    <string name="widget_heading_today">Today</string>
+    <string name="widget_heading_next_up">Next up</string>
+    <string name="widget_no_birthdays_today">No birthdays today</string>
+    <string name="widget_no_birthdays_title">No birthdays yet</string>
+    <string name="widget_no_birthdays_message">Add your first birthday in the app</string>
+    <string name="widget_signed_out_title">Sign in to see your countdowns</string>
+    <string name="widget_signed_out_message">Open the app to pick up where you left off</string>
+    <string name="widget_today">Today</string>
+    <string name="widget_tomorrow">Tomorrow</string>
+    <plurals name="widget_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="widget_day_label">
+        <item quantity="one">day</item>
+        <item quantity="other">days</item>
+    </plurals>
 </resources>

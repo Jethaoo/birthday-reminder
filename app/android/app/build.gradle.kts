@@ -4,6 +4,8 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    // Required to compile the Glance home screen widgets.
+    id("org.jetbrains.kotlin.plugin.compose")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -78,6 +80,22 @@ android {
                 else signingConfigs.getByName("debug")
         }
     }
+
+    // Jetpack Glance (the home screen widgets) is built on Compose.
+    buildFeatures {
+        compose = true
+    }
+}
+
+dependencies {
+    // Renders the countdown widgets. Data comes from home_widget's preferences.
+    implementation("androidx.glance:glance-appwidget:1.2.0")
+
+    // Plain JVM tests for the countdown maths and snapshot parsing.
+    testImplementation("junit:junit:4.13.2")
+    // The JVM unit tests need a real org.json; the mockable android.jar only
+    // ships stubs that throw.
+    testImplementation("org.json:json:20240303")
 }
 
 flutter {

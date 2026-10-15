@@ -6,6 +6,9 @@
     <!-- Required to open the OS settings screen for contact permission denial. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- The countdown widgets re-arm their midnight refreshes after a reboot. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
     <!-- Backup is off: the offline cache holds contacts' phone numbers, emails and
          notes, and the keystore-encrypted session cannot be restored on another
          device anyway. Everything is re-synced from the server after sign-in. -->
@@ -37,7 +40,62 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Lets home_widget tell a widget tap apart from a normal launch. -->
+            <intent-filter>
+                <action android:name="es.antonborri.home_widget.action.LAUNCH"/>
+            </intent-filter>
         </activity>
+
+        <!-- Home screen widgets. Each layout is offered separately in the
+             launcher's picker, so the user chooses by picking a widget. -->
+        <receiver
+            android:name=".widget.NextBirthdayWidgetReceiver"
+            android:label="@string/widget_next_birthday_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/next_birthday_widget_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widget.NextBirthdaysWidgetReceiver"
+            android:label="@string/widget_next_birthdays_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/next_birthdays_widget_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widget.TodayAndNextWidgetReceiver"
+            android:label="@string/widget_today_and_next_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_and_next_widget_info"/>
+        </receiver>
+
+        <!-- Delivers the refreshes scheduled with HomeWidget.scheduleWidgetUpdates,
+             including after a reboot or an app update. -->
+        <receiver
+            android:name="es.antonborri.home_widget.HomeWidgetScheduledUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"/>
+            </intent-filter>
+        </receiver>
 
         <!-- FCM default notification channel used by data+notification payloads. -->
         <meta-data

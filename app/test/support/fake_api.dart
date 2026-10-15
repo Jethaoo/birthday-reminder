@@ -264,12 +264,14 @@ class FakeApi implements BirthdayReminderApi {
   @override
   Future<String?> registerDevice({required String fcmToken, String? deviceName}) async {
     _record('registerDevice');
+    _maybeThrow();
     return registeredDeviceId;
   }
 
   @override
   Future<void> unregisterDevice(String deviceId) async {
     _record('unregisterDevice');
+    _maybeThrow();
     unregisteredDevices.add(deviceId);
   }
 

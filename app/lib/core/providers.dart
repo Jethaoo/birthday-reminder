@@ -8,6 +8,8 @@ import 'auth/session_store.dart';
 import 'notifications/push_service.dart';
 import 'storage/cache_store.dart';
 import 'utils/timezone_utils.dart';
+import 'widgets/widget_bridge.dart';
+import 'widgets/widget_sync.dart';
 
 /// Overridden with `--dart-define=API_BASE_URL=...`. The default targets the
 /// Android emulator's alias for the host machine.
@@ -26,6 +28,13 @@ final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
 final cacheStoreProvider = Provider<CacheStore>((ref) => CacheStore());
 
 final pushServiceProvider = Provider<PushService>((ref) => PushService());
+
+/// Overridden in tests (and on platforms without widgets) with a fake.
+final widgetBridgeProvider = Provider<WidgetBridge>((ref) => const HomeWidgetBridge());
+
+final widgetSyncProvider = Provider<WidgetSync>(
+  (ref) => WidgetSync(ref.watch(widgetBridgeProvider)),
+);
 
 /// The device's IANA timezone, resolved through the platform channel.
 /// Overridden in tests so no plugin is required.

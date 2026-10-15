@@ -150,6 +150,10 @@ class AuthController extends Notifier<AuthState> {
       await _sessions.clear();
       await ref.read(cacheStoreProvider).clear();
       state = const AuthState.signedOut();
+      // The home screen widgets must not keep showing a signed-out user's names.
+      // Cleared after the state flips: this touches platform channels, and the
+      // rest of the app must not wait on it to see the sign-out.
+      await ref.read(widgetSyncProvider).clear();
     } finally {
       _signingOut = false;
     }

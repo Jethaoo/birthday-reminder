@@ -39,6 +39,9 @@ shared with other users of the app.
   audible notification channel.
 - **Countdowns that make sense.** Every birthday shows the next occurrence, how many days away it is
   and the age being turned, calculated in your own timezone.
+- **Countdowns on the home screen.** Three launcher widgets — the next birthday, the next three, or
+  today and what is next — that keep counting down with the app closed, without asking for a token
+  or a background connection.
 - **29 February handling.** Leap-day birthdays are celebrated on 28 February in non-leap years.
 - **Search, filter and sort.** By name, by period (today, this week, this month) and by relationship,
   sorted by soonest, name or recently added.
@@ -229,6 +232,7 @@ the app against a real backend.
 
 - [Architecture](docs/architecture.md) — how the app, Worker, database and reminder engine fit together.
 - [API reference](docs/api.md) — every endpoint, its payloads and its error codes.
+- [Home screen widgets](docs/widgets.md) — the three launcher widgets, the snapshot they read and when they refresh.
 - [Deployment runbook](docs/deployment.md) — Cloudflare and Android release steps.
 - [Contributing](CONTRIBUTING.md) — branch names, checks and conventions.
 
