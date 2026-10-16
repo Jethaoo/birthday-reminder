@@ -2,4 +2,8 @@
 <resources>
     <!-- Launcher icon background: the app's deep green brand colour. -->
     <color name="ic_launcher_background">#293D32</color>
+    <!-- The app's own background, so the launch window, the launch sequence and
+         the app itself are one continuous surface. Matches AppPalette.background
+         in light mode; values-night overrides it. -->
+    <color name="app_background">#F8F8F4</color>
 </resources>

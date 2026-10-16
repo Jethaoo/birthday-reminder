@@ -117,6 +117,11 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
   birthday screen, Edit and Delete on a birthday's detail screen — are pinned to the bottom of the
   screen, above the system inset, so they are reachable without scrolling. "Import from contacts" is
   no longer offered while editing an existing birthday.
+- **app:** A launch sequence from the design: the app mark fades and scales in, holds, then scales up
+  as the app settles underneath it. It holds until the stored session has resolved, so the app is
+  never revealed before it can authenticate, and it follows the system's reduced-motion setting.
+  The Android launch window and the window behind the Flutter UI now use the app's own background
+  colour, with a dark-mode variant, so launching no longer flashes white first.
 
 ### Changed
 

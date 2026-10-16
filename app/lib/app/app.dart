@@ -7,6 +7,7 @@ import '../core/notifications/push_service.dart';
 import '../core/providers.dart';
 import '../shared/models/user_settings.dart';
 import 'data_refresh_coordinator.dart';
+import 'launch_splash.dart';
 import 'router.dart';
 import 'theme.dart';
 import 'widget_coordinator.dart';
@@ -20,6 +21,9 @@ class BirthdayReminderApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    // The launch sequence holds until the stored session has resolved, so the app
+    // is never revealed showing screens it has no token to authenticate.
+    final sessionResolved = !ref.watch(authControllerProvider).isRestoring;
 
     return MaterialApp.router(
       title: 'Birthday Reminder',
@@ -33,9 +37,12 @@ class BirthdayReminderApp extends ConsumerWidget {
         AppThemeMode.system => ThemeMode.system,
       },
       routerConfig: router,
-      builder: (context, child) => PushCoordinator(
-        child: WidgetCoordinator(
-          child: DataRefreshCoordinator(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => LaunchSplash(
+        ready: sessionResolved,
+        child: PushCoordinator(
+          child: WidgetCoordinator(
+            child: DataRefreshCoordinator(child: child ?? const SizedBox.shrink()),
+          ),
         ),
       ),
     );
