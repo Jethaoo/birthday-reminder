@@ -62,7 +62,11 @@ class AuthController extends Notifier<AuthState> {
       return;
     }
 
-    if (token == null) {
+    if (token == null || token.trim().isEmpty) {
+      // A blank token is a session that went bad — the timezone sync used to be
+      // able to write one. Clear the leftovers so the app cannot come back up
+      // showing signed-in screens it has no way to authenticate.
+      await _sessions.clear();
       state = const AuthState.signedOut();
       return;
     }
@@ -187,8 +191,9 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       final updated = await ref.read(apiProvider).updateMe(timezone: current);
-      state = state.copyWith(user: updated, offline: false);
-      await _sessions.save(token: await _sessions.readToken() ?? '', user: updated);
+      // Goes through applyUser so the stored token is only ever rewritten when
+      // it could actually be read: inventing an empty one blanked the session.
+      await applyUser(updated);
     } catch (_) {
       // Timezone sync retries on the next resume.
     }

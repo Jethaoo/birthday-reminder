@@ -91,6 +91,12 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
   calendar now revalidate when the app returns to the foreground or the connection comes back,
   in place, so nothing on screen is emptied or replaced by a spinner. The offline banner now says
   which time the data it is showing was fetched at.
+- **app:** A timezone sync that could not read the stored access token wrote an empty string in its
+  place, and an empty token was then restored as a valid session. The app came up showing
+  signed-in screens, sent every request with no `Authorization` header, took a 401 on the first
+  one and ended the session — again on every launch, until the account was signed in by hand.
+  Storing a blank token is now refused, restoring one is treated as no session (and cleared), and
+  a sync that cannot read the token leaves it alone.
 
 ### Added
 

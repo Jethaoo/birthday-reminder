@@ -16,11 +16,21 @@ class SessionStore {
   static const _deviceKey = 'birthday_device_id';
 
   Future<void> save({required String token, required AppUser user}) async {
+    // An empty token authenticates nothing: the API client drops the header for
+    // it, so storing one leaves the app "signed in" with every request rejected.
+    // Refusing it here means a bug can no longer destroy a working session.
+    if (token.trim().isEmpty) {
+      throw ArgumentError.value(token, 'token', 'Refusing to store an empty access token');
+    }
     await _storage.write(key: _tokenKey, value: token);
     await _storage.write(key: _userKey, value: jsonEncode(user.toJson()));
   }
 
-  Future<String?> readToken() => _storage.read(key: _tokenKey);
+  /// The stored token, or null when there is none. A blank value counts as none.
+  Future<String?> readToken() async {
+    final token = await _storage.read(key: _tokenKey);
+    return (token == null || token.trim().isEmpty) ? null : token;
+  }
 
   Future<AppUser?> readUser() async {
     final raw = await _storage.read(key: _userKey);
