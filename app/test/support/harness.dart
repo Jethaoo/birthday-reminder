@@ -25,6 +25,9 @@ const signedInState = AuthState(status: AuthStatus.signedIn, user: testUser);
 /// Signed-out state for the authentication screens.
 const signedOutState = AuthState(status: AuthStatus.signedOut);
 
+/// The state the app is in while it reads the stored session on launch.
+const restoringState = AuthState.restoring();
+
 /// A session that is already signed in, so screens render without a login step.
 class FakeAuthController extends AuthController {
   FakeAuthController(this.initialUser);
