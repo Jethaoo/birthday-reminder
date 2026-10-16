@@ -21,6 +21,7 @@ import '../features/settings/presentation/appearance_screen.dart';
 import '../features/settings/presentation/notification_settings_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/shell/app_shell.dart';
+import 'splash_screen.dart';
 
 /// Routes that do not require a session.
 const _publicRoutes = <String>{
@@ -30,6 +31,25 @@ const _publicRoutes = <String>{
   '/forgot-password',
   '/reset-password',
 };
+
+/// Shown while the stored session resolves.
+const splashRoute = '/splash';
+
+/// Where a navigation request should go for the current [auth] state.
+///
+/// While the session is still resolving, everything waits on [splashRoute]: the
+/// signed-in shell fetches as it builds, and a request sent before the token is
+/// attached comes back 401 — which ended the very session being restored, on
+/// every launch. Returning `null` means "render the requested route", so the
+/// restoring case must name a route instead.
+String? sessionRedirect(AuthState auth, String location) {
+  if (auth.isRestoring) return location == splashRoute ? null : splashRoute;
+
+  final isPublic = _publicRoutes.contains(location);
+  if (!auth.isSignedIn) return isPublic ? null : '/';
+  if (isPublic) return '/home';
+  return null;
+}
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -56,18 +76,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/home',
     refreshListenable: refresh,
-    redirect: (context, state) {
-      final auth = ref.read(authControllerProvider);
-      final location = state.matchedLocation;
-      final isPublic = _publicRoutes.contains(location);
-
-      // Wait for the stored session to resolve before choosing a destination.
-      if (auth.isRestoring) return null;
-      if (!auth.isSignedIn) return isPublic ? null : '/';
-      if (isPublic) return '/home';
-      return null;
-    },
+    redirect: (context, state) =>
+        sessionRedirect(ref.read(authControllerProvider), state.matchedLocation),
     routes: [
+      GoRoute(path: splashRoute, builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/', builder: (context, state) => const WelcomeScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),

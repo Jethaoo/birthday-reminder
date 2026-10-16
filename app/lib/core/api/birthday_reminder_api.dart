@@ -168,15 +168,20 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
 
   void Function()? _onUnauthorized;
 
+  /// The token the client is currently sending, so a 401 can be traced back to
+  /// the request that carried it.
+  String? _token;
+
   @override
   set onUnauthorized(void Function()? callback) => _onUnauthorized = callback;
 
   @override
   void setAuthToken(String? token) {
-    if (token == null || token.isEmpty) {
+    _token = (token == null || token.isEmpty) ? null : token;
+    if (_token == null) {
       _dio.options.headers.remove('Authorization');
     } else {
-      _dio.options.headers['Authorization'] = 'Bearer $token';
+      _dio.options.headers['Authorization'] = 'Bearer $_token';
     }
   }
 
@@ -222,7 +227,15 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
     if (status >= 200 && status < 300) return data ?? const <String, dynamic>{};
 
     // A 401 from sign-in itself means wrong credentials, not an expired session.
-    if (status == 401 && !response.requestOptions.path.startsWith('/api/auth/')) {
+    // Otherwise it only ends the session when the request actually carried the
+    // current token: a request that went out before the token was attached is no
+    // evidence that the session expired, and treating it as such signed the user
+    // out of a session that was perfectly good.
+    final sentWith = response.requestOptions.headers['Authorization'];
+    if (status == 401 &&
+        !response.requestOptions.path.startsWith('/api/auth/') &&
+        _token != null &&
+        sentWith == 'Bearer $_token') {
       _onUnauthorized?.call();
     }
 

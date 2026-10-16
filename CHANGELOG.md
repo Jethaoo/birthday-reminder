@@ -97,6 +97,11 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
   one and ended the session — again on every launch, until the account was signed in by hand.
   Storing a blank token is now refused, restoring one is treated as no session (and cleared), and
   a sync that cannot read the token leaves it alone.
+- **app:** Opening the app signed you out. The router let the signed-in shell render while the
+  stored session was still being restored, so the first request went out with no `Authorization`
+  header; its 401 then ended the session that was in the middle of being restored, on every launch.
+  The app now waits on a splash screen until the session has resolved, and a 401 only ends a
+  session when the request that earned it actually carried the token.
 
 ### Added
 

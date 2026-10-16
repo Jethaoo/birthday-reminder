@@ -39,6 +39,18 @@ String _error(String code, String message) => jsonEncode({
     });
 
 void main() {
+  test('a 401 on a request sent before the token is attached does not end the session', () async {
+    final adapter = _StubAdapter(401, _error('unauthorized', 'Authentication required.'));
+    final api = _api(adapter);
+    var sessionEnded = 0;
+    api.onUnauthorized = () => sessionEnded++;
+
+    // What a screen does when it builds before the session has been restored.
+    await expectLater(api.home(), throwsA(isA<ApiException>()));
+
+    expect(sessionEnded, 0);
+  });
+
   test('a non-JSON 5xx page is a server error, not "no internet"', () async {
     final api = _api(_StubAdapter(502, '<html>Bad gateway</html>', contentType: 'text/html'));
 
@@ -49,7 +61,10 @@ void main() {
   });
 
   test('a 401 on an authenticated route reports the ended session', () async {
-    final api = _api(_StubAdapter(401, _error('UNAUTHORIZED', 'Sign in again.')));
+    // Attached, because that is what makes it an authenticated request: a 401 on
+    // one that carried no token is not evidence that the session ended.
+    final api = _api(_StubAdapter(401, _error('UNAUTHORIZED', 'Sign in again.')))
+      ..setAuthToken('token-1');
     var notified = 0;
     api.onUnauthorized = () => notified++;
 
