@@ -45,6 +45,10 @@ const splashRoute = '/splash';
 String? sessionRedirect(AuthState auth, String location) {
   if (auth.isRestoring) return location == splashRoute ? null : splashRoute;
 
+  // The session has resolved, so the splash screen has done its job: send the
+  // user where they belong instead of leaving them on the spinner.
+  if (location == splashRoute) return auth.isSignedIn ? '/home' : '/';
+
   final isPublic = _publicRoutes.contains(location);
   if (!auth.isSignedIn) return isPublic ? null : '/';
   if (isPublic) return '/home';

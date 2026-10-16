@@ -102,6 +102,9 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
   header; its 401 then ended the session that was in the middle of being restored, on every launch.
   The app now waits on a splash screen until the session has resolved, and a 401 only ends a
   session when the request that earned it actually carried the token.
+- **app:** The splash screen that waits for the session never handed control back, so a session that
+  restored fine sat on the spinner instead of opening the dashboard. A resolved session now goes to
+  the shell, and a signed-out one to the welcome screen.
 
 ### Added
 
