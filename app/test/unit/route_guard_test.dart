@@ -19,6 +19,9 @@ void main() {
     expect(sessionRedirect(signedInState, '/birthdays'), isNull);
     expect(sessionRedirect(signedInState, '/'), '/home');
     expect(sessionRedirect(signedInState, '/login'), '/home');
+    // Regression: nothing sent a resolved session off the splash screen, so a
+    // restored session sat on the spinner until the app was restarted again.
+    expect(sessionRedirect(signedInState, splashRoute), '/home');
   });
 
   test('a signed-out user is kept on the public routes', () {
