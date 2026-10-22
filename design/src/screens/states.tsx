@@ -138,7 +138,10 @@ export function NotificationsScreen() {
       <div className="space-y-3">
         <NotificationPreview title="🎂 Birthday Reminder" body={"Sarah Tan's birthday is in 7 days.\n30 September"} />
         <NotificationPreview title="🎂 Birthday Tomorrow" body="Sarah Tan's birthday is tomorrow." />
-        <NotificationPreview title="🎉 Birthday Today" body="It's Sarah Tan's birthday today!" />
+        <NotificationPreview
+          title="🎉 Wish Sarah Tan a happy birthday!"
+          body="It's Sarah Tan's birthday today!"
+        />
       </div>
       <div className="mt-6">
         <Label>In-app banner while using the app</Label>

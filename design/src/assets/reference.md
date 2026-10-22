@@ -626,7 +626,7 @@ Sarah Tan's birthday is tomorrow.
 ### Today
 
 ```text
-🎉 Birthday Today
+🎉 Wish Sarah Tan a happy birthday!
 
 It's Sarah Tan's birthday today!
 ```
