@@ -34,37 +34,12 @@
     }
   ],
 
-  // Deploy with `wrangler deploy --env staging` or `--env production`.
+  // Deploy production with `wrangler deploy --env production`.
   // Named environments do not inherit bindings, vars or triggers.
   // The D1 database ids and APP_BASE_URL values below belong to this
   // deployment — replace them with your own before deploying to your account.
   // See docs/deployment.md for the first-time setup.
   "env": {
-    "staging": {
-      "name": "birthday-reminder-staging",
-      "vars": {
-        "ENVIRONMENT": "staging",
-        // Used to build password-reset links.
-        "APP_BASE_URL": "https://birthday-reminder-staging.jpaypay17.workers.dev"
-      },
-      "triggers": {
-        "crons": ["* * * * *"]
-      },
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "birthday-reminder-staging",
-          "database_id": "287fb6d2-02a9-4c0e-8bcf-ce9464e6fdc9",
-          "migrations_dir": "migrations"
-        }
-      ],
-      "r2_buckets": [
-        {
-          "binding": "PHOTOS",
-          "bucket_name": "birthday-reminder-photos-staging"
-        }
-      ]
-    },
     "production": {
       "name": "birthday-reminder",
       "vars": {
