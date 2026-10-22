@@ -136,6 +136,12 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
 - **app:** A release build without `android/key.properties` still falls back to the debug key, but
   Gradle now prints a warning that such an APK cannot later be updated by a release-signed build.
 
+### Documentation
+
+- **repo:** Refreshed the README, architecture, API, deployment, widget and design references against
+  V1: corrected notification and offline behaviour, password-reset setup, staging test-push
+  availability, response shapes and the current version.
+
 ### Not yet addressed
 
 - **backend:** Forgot-password still answers more slowly for real accounts, because the reset email

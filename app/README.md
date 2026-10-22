@@ -3,6 +3,9 @@
 The Android client. See the [root README](../README.md) for the project overview, the backend and the
 design surface.
 
+Flutter 3.41 or newer (Dart 3.11.5+), the Android SDK, and a device or emulator running Android 7.0
+(API 24) or newer are required.
+
 ## Run it
 
 ```bash
@@ -21,7 +24,7 @@ release build must be pointed at an `https://` API:
 ```bash
 flutter build appbundle --release \
   --dart-define=API_BASE_URL=https://your-worker.workers.dev \
-  --dart-define=APP_VERSION=1.0.0
+  --dart-define=APP_VERSION=1.2.0
 ```
 
 ## Structure
@@ -47,10 +50,17 @@ flutter analyze
 flutter test
 
 # The widget's countdown maths and snapshot parsing are plain JVM tests.
-cd android && ./gradlew :app:testDebugUnitTest
+cd android
+./gradlew :app:testDebugUnitTest   # macOS/Linux
+.\gradlew.bat :app:testDebugUnitTest  # PowerShell
 ```
+
+Set `JAVA_HOME` to a JDK 17 or newer installation before running Gradle.
 
 ## Release signing
 
 Release builds read `android/key.properties` when it exists and otherwise fall back to the debug keys,
 so you can build without the upload keystore. See the deployment runbook for creating one.
+
+`APP_VERSION` controls the version shown in Settings → About. It defaults to `1.0.0` when omitted;
+the package itself is currently versioned `1.2.0+6`.
