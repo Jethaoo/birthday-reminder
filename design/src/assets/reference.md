@@ -1,10 +1,15 @@
-# Birthday Reminder App
+# Birthday Reminder — V1 product and design reference
+
+This is the product and workflow reference for the shipping Flutter Android app. The runnable visual
+reference is `design/src/DesignSurface.tsx`; API and deployment details live in the repository
+`docs/` directory. V1 does not include AI-generated wishes or Google sign-in.
 
 ## 1. Product Overview
 
 Design a modern Android birthday reminder application built with Flutter.
 
-The app helps users store birthdays, receive advance birthday reminders, manage gift ideas and notes, and generate birthday wishes with AI.
+The app helps users store birthdays, receive advance birthday reminders, and keep gift ideas, notes
+and contact details in one place.
 
 The application should feel:
 
@@ -76,7 +81,6 @@ Settings
 ├── Notifications
 ├── Account
 ├── Appearance
-├── AI Settings
 └── About
 ```
 
@@ -180,7 +184,7 @@ Example:
 
 # 6. Monthly Summary
 
-Provide a lightweight summary section.
+Provide a lightweight summary of the current month's today and upcoming birthdays.
 
 Example:
 
@@ -356,8 +360,6 @@ Reminder
 Provide:
 
 ```text
-[ Generate Birthday Wish ]
-
 [ Edit ]
 
 [ Delete ]
@@ -367,50 +369,23 @@ Delete should require confirmation.
 
 ---
 
-# 9. Birthday Wish Screen
+# 9. Reminder Editor
 
-Design a dedicated AI birthday-wish experience.
-
-Example:
-
-```text
-Birthday Wish
-
-For Sarah Tan
-
-Relationship
-[ Friend ▼ ]
-
-Tone
-[ Friendly ▼ ]
-
-Length
-[ Short ▼ ]
-
-Additional context
-[ Likes travelling... ]
-
-          [ Generate Wish ]
-```
-
-After generation:
+Each birthday can have several reminders, each with its own day offset and time. Available offsets
+are on the day, 1, 3, 7, 14 and 30 days before. An individual reminder can be disabled without being
+deleted, and a birthday can hold at most 10 reminders.
 
 ```text
-Your Birthday Wish
+Reminders
 
-"Happy birthday, Sarah! 🎉
-Hope your new year brings you
-plenty of exciting adventures,
-good food, and amazing memories."
+Sarah Tan · 30 September
 
-[ Copy ]
+7 days before       09:00       ON
+1 day before        09:00       ON
+On birthday         09:00       ON
 
-[ Share ]
-
-[ Regenerate ]
+[ Add another reminder ]
 ```
-
-The design should clearly distinguish AI-generated content from user-entered information.
 
 ---
 
@@ -434,30 +409,20 @@ Today
 This Week
 This Month
 Family
-Friends
-Work
+Friend
+Colleague
+Other
 ```
 
-Birthday list should be grouped by month or alphabetically.
+Display the birthdays as a paginated list. The default sort is upcoming, with name and
+recently-added alternatives available from the sort control.
 
 Example:
 
 ```text
-September
-
-30 Sep
-Sarah Tan
-Friend
-
-October
-
-5 Oct
-Alex Lim
-Family
-
-12 Oct
-Jason Lee
-Colleague
+30 Sep   Sarah Tan    Friend     Today
+5 Oct    Alex Lim     Family     12 days
+12 Oct   Jason Lee    Colleague  19 days
 ```
 
 ---
@@ -553,6 +518,7 @@ Notifications
 
 Birthday reminders       ON
 Today's birthdays        ON
+Tomorrow reminders       ON
 Reminder sound           ON
 ```
 
@@ -576,23 +542,12 @@ Theme
 ○ Dark
 ```
 
-## AI
-
-```text
-AI Birthday Wishes
-
-Enable AI wishes        ON
-
-Default tone
-[ Friendly ▼ ]
-```
-
 ## About
 
 ```text
 About
 
-Version 1.0.0
+Version 1.2.0
 
 Privacy Policy
 Terms of Service
@@ -626,7 +581,7 @@ Sarah Tan's birthday is tomorrow.
 ### Today
 
 ```text
-🎉 Birthday Today
+🎉 Wish Sarah Tan a happy birthday!
 
 It's Sarah Tan's birthday today!
 ```
@@ -690,17 +645,15 @@ Password
 [ Sign In ]
 
 Forgot password?
-
-──────── OR ────────
-
-[ Continue with Google ]
 ```
 
 ---
 
 # 16. Contact Import
 
-The app should eventually allow importing birthdays from Android contacts.
+The app imports birthdays from Android contacts. The user grants access, selects individual
+contacts, and only those selections are saved to their account. A birthday already saved is skipped
+and included in the result summary.
 
 Entry point:
 
@@ -728,7 +681,7 @@ Import Birthdays
 After import:
 
 ```text
-2 birthdays imported successfully.
+2 imported · 1 already saved
 ```
 
 ---
@@ -777,7 +730,6 @@ Include loading states for:
 * Birthday details
 * Saving birthday
 * Contact import
-* AI generation
 
 Use skeleton loaders where appropriate instead of excessive spinners.
 
@@ -803,16 +755,6 @@ Network error:
 No Internet Connection
 
 Check your connection and try again.
-```
-
-AI error:
-
-```text
-Couldn't generate a birthday wish.
-
-Please try again.
-
-[ Try Again ]
 ```
 
 ---
@@ -1000,20 +942,18 @@ Save
 Birthday Details
 ```
 
-## Flow 3. Upcoming birthday
+## Flow 3. Reminders
 
 ```text
-Home
- ↓
-Upcoming Birthday
- ↓
 Birthday Details
  ↓
-Generate Wish
+Add Reminder
  ↓
-AI Wish
+Pick day and time
  ↓
-Copy / Share
+Save
+ ↓
+Updated reminder list
 ```
 
 ## Flow 4. Notification
@@ -1053,7 +993,7 @@ Select Contacts
  ↓
 Import
  ↓
-Birthday List
+Back to Add Birthday
 ```
 
 ---
@@ -1095,12 +1035,12 @@ The Figma file should contain:
 * Birthday Details
 * Delete confirmation
 
-### Page 5. AI
+### Page 5. Reminders & notifications
 
-* Birthday Wish setup
-* Loading state
-* Generated wish
-* Error state
+* Multiple reminders on a birthday
+* Default reminder settings
+* Notification previews
+* Test delivery state
 
 ### Page 6. Contact Import
 
@@ -1184,6 +1124,6 @@ The finished application should communicate one simple idea:
 
 The primary user experience should therefore revolve around:
 
-**Today's birthdays → Upcoming birthdays → Countdown → Reminder → Birthday wish**
+**Today's birthdays → Upcoming birthdays → Countdown → Reminder → Birthday details**
 
 The UI should make these actions obvious within a few seconds of opening the application.

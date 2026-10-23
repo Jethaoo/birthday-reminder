@@ -8,7 +8,7 @@ Monorepo for a production Android birthday reminder app.
 - `backend/` — Cloudflare Worker (TypeScript) with D1 migrations and the cron reminder engine.
 - `design/` — the original Figma Make prototype, extended into the full V1 design surface.
   It is a reference implementation of the visual language, not shipped code. See `design/AGENTS.md`.
-- `docs/` — architecture, API reference and deployment runbook.
+- `docs/` — architecture, API reference, deployment runbook and widget contract.
 
 ## Conventions
 
@@ -23,9 +23,10 @@ Monorepo for a production Android birthday reminder app.
 
 ```bash
 cd backend && pnpm install && pnpm db:migrate:local && pnpm dev
-cd backend && pnpm test && pnpm typecheck
+cd backend && pnpm typecheck && pnpm lint && pnpm test
 cd app && flutter pub get && flutter analyze && flutter test
 cd design && pnpm install && pnpm dev
+cd design && pnpm install && pnpm exec tsc --noEmit && pnpm build
 ```
 
 ## Style

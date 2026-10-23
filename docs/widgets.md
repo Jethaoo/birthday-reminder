@@ -29,9 +29,10 @@ network call, token or background job is involved. The widget process never hold
 never talks to the API.
 
 The tradeoff is latency for data changes. A birthday added on another device appears once this app
-next loads Home, because that is when a fresh snapshot is written. The snapshot holds Home's today
-plus its five upcoming birthdays, so a phone that is not opened for several days still shows correct
-counts; once nothing upcoming is left, the widget falls back to its empty state.
+next loads Home, because that is when a fresh snapshot is written. The snapshot holds up to six
+entries: today's birthdays plus Home's five upcoming birthdays, nearest first. A phone that is not
+opened for several days still shows correct counts; once nothing upcoming is left, the widget falls
+back to its empty state.
 
 ## Snapshot contract
 
@@ -98,8 +99,10 @@ they sit behind the bearer token.
 
 ```bash
 cd app && flutter analyze && flutter test
-cd app/android && ./gradlew :app:testDebugUnitTest
-cd app && flutter build apk --debug
+cd app/android
+./gradlew :app:testDebugUnitTest        # macOS/Linux
+.\gradlew.bat :app:testDebugUnitTest    # PowerShell
+cd .. && flutter build apk --debug
 ```
 
 The Gradle wrapper needs a JDK 17+ on `JAVA_HOME`; a shell still pointing at Java 8 fails before the

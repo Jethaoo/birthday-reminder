@@ -18,9 +18,9 @@ right moment, even when the app is closed.
 
 From the user's side it is a normal Android app with four tabs:
 
-- **Home** — who has a birthday today, who is coming up, and a summary of the current month.
+- **Home** — who has a birthday today, who is coming up, and a summary of what remains this month.
 - **Birthdays** — every saved birthday, searchable and filterable by relationship.
-- **Calendar** — the year as a grid, so you can see the busy months at a glance.
+- **Calendar** — a monthly grid with birthday markers and the selected day's birthdays.
 - **Settings** — notification preferences, default reminder time, theme, account, and account
   deletion.
 
@@ -35,8 +35,8 @@ shared with other users of the app.
   and on the day — each with its own time, and switch any of them off without deleting it.
 - **Everything you would want to remember.** Photo, relationship, phone number, email, notes and
   gift ideas, alongside the date and an optional birth year.
-- **Today, tomorrow and advance notifications**, each individually switchable, plus a silent or
-  audible notification channel.
+- **Switchable reminder delivery.** Global birthday reminders, today reminders and tomorrow reminders
+  have separate switches, and the account-wide sound preference selects the audible or silent channel.
 - **Countdowns that make sense.** Every birthday shows the next occurrence, how many days away it is
   and the age being turned, calculated in your own timezone.
 - **Countdowns on the home screen.** Three launcher widgets — the next birthday, the next three, or
@@ -45,11 +45,11 @@ shared with other users of the app.
 - **29 February handling.** Leap-day birthdays are celebrated on 28 February in non-leap years.
 - **Search, filter and sort.** By name, by period (today, this week, this month) and by relationship,
   sorted by soonest, name or recently added.
-- **Contact import.** Pick individual contacts to bring in; only the ones you select are uploaded,
-  and duplicates are detected before anything is saved.
+- **Contact import.** Pick individual contacts to bring in. Only the ones you select are uploaded;
+  birthdays already saved are skipped by the server and reported in the import result.
 - **Light and dark themes**, following the system setting or locked on by choice.
-- **Works offline.** The last synced data stays readable, with a clear banner and writes disabled
-  until the connection returns.
+- **Works offline.** The last synced data stays readable, with a banner showing how old it is.
+  Writes are never queued: a change made without a connection fails and can be retried later.
 - **Account management.** Sign up, sign in, password reset by email, change password, delete the
   account and everything in it.
 
@@ -82,6 +82,7 @@ The same screens in the dark theme:
 | --- | --- |
 | Run the app | Flutter 3.41 or newer (Dart 3.11.5+), the Android SDK, and an Android device or emulator running Android 7.0 (API 24) or newer |
 | Run the backend locally | Node.js 22 or newer and pnpm (enable it with `corepack enable`) |
+| Run the design surface | Node.js 22 or newer and pnpm |
 | Deploy your own server | A Cloudflare account with Workers, D1 and R2 available |
 | Receive push notifications | A Firebase project and its `google-services.json` (optional — see [Configuration](#configuration)) |
 | Send password-reset emails | A [Resend](https://resend.com) account (optional) |
@@ -116,6 +117,8 @@ pnpm db:migrate:local
 pnpm dev                         # serves the API on http://localhost:8787
 ```
 
+In PowerShell, use `Copy-Item .dev.vars.example .dev.vars`.
+
 **Terminal 2 — app on the Android emulator**
 
 ```bash
@@ -146,7 +149,7 @@ Debug builds allow plain HTTP for this workflow. Release builds do not, so they 
 cd app
 flutter build apk --release \
   --dart-define=API_BASE_URL=https://YOUR_WORKER_URL \
-  --dart-define=APP_VERSION=1.0.0
+  --dart-define=APP_VERSION=1.2.0
 ```
 
 The APK is written to `app/build/app/outputs/flutter-apk/app-release.apk`. Without a release keystore
@@ -172,15 +175,15 @@ the app against a real backend.
 | --- | --- | --- |
 | `JWT_SECRET` | Yes | Signs access tokens. Use a long random string, and never reuse one between environments. |
 | `FCM_SERVICE_ACCOUNT` | No | Firebase service-account JSON on a single line. Without it, reminders are still scheduled and logged, but no push is delivered. |
-| `RESEND_API_KEY` | No | Enables password-reset emails. Without it, reset links are written to the Worker log instead. |
-| `EMAIL_FROM` | No | The sender address for those emails, for example `Birthday Reminder <noreply@example.com>`. |
+| `RESEND_API_KEY` | No | Enables password-reset emails when `EMAIL_FROM` is also set. Without the pair, the Worker logs that the email was skipped. |
+| `EMAIL_FROM` | No | The sender address used with the Resend key, for example `Birthday Reminder <noreply@example.com>`. |
 
 **App values** are compile-time:
 
 | Value | Purpose |
 | --- | --- |
 | `--dart-define=API_BASE_URL=...` | The backend the app calls. Defaults to `http://10.0.2.2:8787` for local development. |
-| `--dart-define=APP_VERSION=...` | The version string shown in the app. |
+| `--dart-define=APP_VERSION=...` | The version string shown in the app. The current package version is `1.2.0`; the built-in fallback is `1.0.0`. |
 
 **Files each checkout supplies for itself**, all gitignored:
 
@@ -210,8 +213,9 @@ the app against a real backend.
   own Worker, D1 database and R2 bucket.
 - **Push needs your own Firebase project.** Without `google-services.json` and the service account
   the app works, but notifications are only recorded, not delivered.
-- **Password-reset email needs a mail provider.** Without a Resend key, reset links are logged rather
-  than sent.
+- **Password-reset email needs a mail provider.** Without both `RESEND_API_KEY` and `EMAIL_FROM`,
+  no email is sent. In local `development` or `test`, the forgot-password response includes a
+  `resetToken` so the flow can still be exercised directly.
 - **One user, one account.** Birthdays belong to a single account; there is no sharing or family
   plan.
 - **Reminders are minute-accurate**, which is what the cron trigger allows; they are not scheduled to
@@ -225,7 +229,7 @@ the app against a real backend.
 | [`app/`](app) | The Flutter Android app. |
 | [`backend/`](backend) | The Cloudflare Worker API, D1 migrations and the cron reminder engine. |
 | [`design/`](design) | The design surface the app was built to match — a runnable React prototype, not shipped code. |
-| [`docs/`](docs) | API reference, architecture notes and the deployment runbook. |
+| [`docs/`](docs) | Architecture notes, API reference, widget contract and deployment runbook. |
 | [`scripts/`](scripts) | Helper scripts for running the app against a local Worker. |
 
 ## Documentation

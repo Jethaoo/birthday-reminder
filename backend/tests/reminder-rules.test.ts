@@ -45,9 +45,10 @@ describe('notification types', () => {
     expect(notificationCopy('birthday_tomorrow', 'Sarah Tan', 1, '30 September').body).toBe(
       "Sarah Tan's birthday is tomorrow.",
     )
-    expect(notificationCopy('birthday_today', 'Sarah Tan', 0, '30 September').body).toBe(
-      "It's Sarah Tan's birthday today!",
-    )
+    expect(notificationCopy('birthday_today', 'Sarah Tan', 0, '30 September')).toEqual({
+      title: '🎉 Wish Sarah Tan a happy birthday!',
+      body: "It's Sarah Tan's birthday today!",
+    })
   })
 })
 

@@ -70,7 +70,7 @@ export function notificationCopy(
 ): Pick<PushMessage, 'title' | 'body'> {
   switch (type) {
     case 'birthday_today':
-      return { title: '🎉 Birthday Today', body: `It's ${name}'s birthday today!` }
+      return { title: `🎉 Wish ${name} a happy birthday!`, body: `It's ${name}'s birthday today!` }
     case 'birthday_tomorrow':
       return { title: '🎂 Birthday Tomorrow', body: `${name}'s birthday is tomorrow.` }
     default:

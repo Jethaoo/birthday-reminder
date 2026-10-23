@@ -3,7 +3,11 @@
 ## Before you start
 
 ```bash
-cd backend && pnpm install && cp .dev.vars.example .dev.vars && pnpm db:migrate:local
+cd backend && pnpm install && pnpm db:migrate:local
+# Bash:
+cp .dev.vars.example .dev.vars
+# PowerShell:
+Copy-Item .dev.vars.example .dev.vars
 cd app && flutter pub get
 ```
 
