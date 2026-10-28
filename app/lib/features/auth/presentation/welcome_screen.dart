@@ -30,7 +30,10 @@ class WelcomeScreen extends StatelessWidget {
                 child: const Text('🎂', style: TextStyle(fontSize: 34)),
               ),
               const SizedBox(height: 28),
-              Text('Remember Every\nBirthday', style: text.displaySmall?.copyWith(fontSize: 36)),
+              Text(
+                'Remember Every\nBirthday',
+                style: text.displaySmall?.copyWith(fontSize: 36),
+              ),
               const SizedBox(height: 12),
               Text(
                 'Never forget an important birthday again. Save the dates, get reminders before the day and keep gift ideas in one place.',
@@ -38,12 +41,12 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const Spacer(),
               FilledButton(
-                onPressed: () => context.go('/register'),
+                onPressed: () => context.push('/register'),
                 child: const Text('Get started'),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: () => context.go('/login'),
+                onPressed: () => context.push('/login'),
                 child: const Text('Sign in'),
               ),
             ],
