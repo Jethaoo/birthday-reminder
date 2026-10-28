@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/navigation.dart';
 import '../../../app/theme.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/providers.dart';
@@ -36,7 +37,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     setState(() => _submitting = true);
 
     try {
-      await ref.read(authControllerProvider.notifier).register(
+      await ref
+          .read(authControllerProvider.notifier)
+          .register(
             name: _nameController.text,
             email: _emailController.text,
             password: _passwordController.text,
@@ -45,7 +48,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) context.go('/home');
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -58,7 +63,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(leading: BackButton(onPressed: () => context.go('/login'))),
+      appBar: AppBar(
+        leading: BackButton(onPressed: () => popOrGo(context, '/')),
+      ),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -70,7 +77,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               AppSpacing.screenPadding,
             ),
             children: [
-              Text('Create account', style: text.displaySmall?.copyWith(fontSize: 30)),
+              Text(
+                'Create account',
+                style: text.displaySmall?.copyWith(fontSize: 30),
+              ),
               const SizedBox(height: 6),
               Text(
                 'Your birthdays are stored securely so they are on every device you sign in to.',
@@ -80,7 +90,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               TextFormField(
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Name', hintText: 'Jordan Davis'),
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'Jordan Davis',
+                ),
                 validator: Validators.name,
               ),
               const SizedBox(height: 14),
@@ -96,7 +109,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Password',
-                  helperText: 'At least 8 characters with a letter and a number',
+                  helperText:
+                      'At least 8 characters with a letter and a number',
                 ),
                 validator: Validators.password,
               ),
@@ -104,22 +118,37 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               TextFormField(
                 controller: _confirmController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Confirm password'),
-                validator: (value) => Validators.confirmPassword(value, _passwordController.text),
+                decoration: const InputDecoration(
+                  labelText: 'Confirm password',
+                ),
+                validator: (value) =>
+                    Validators.confirmPassword(value, _passwordController.text),
               ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _submitting ? null : _submit,
                 child: _submitting
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Text('Create account'),
               ),
               const SizedBox(height: 18),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Already have an account?', style: text.bodyMedium?.copyWith(color: palette.textSecondary)),
-                  TextButton(onPressed: () => context.go('/login'), child: const Text('Sign in')),
+                  Text(
+                    'Already have an account?',
+                    style: text.bodyMedium?.copyWith(
+                      color: palette.textSecondary,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.pushReplacement('/login'),
+                    child: const Text('Sign in'),
+                  ),
                 ],
               ),
             ],

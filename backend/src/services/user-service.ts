@@ -2,13 +2,16 @@ import type { Env } from '../env'
 import { verifyPassword } from '../lib/crypto'
 import { ApiError } from '../lib/errors'
 import { nowIso } from '../lib/ids'
-import { isValidTimeZone } from '../lib/time'
+import { isLeapYear, isValidTimeZone } from '../lib/time'
 import {
   asRecord,
   booleanFlag,
+  optionalInt,
+  optionalString,
   reminderDaysBefore,
   reminderTime,
   requiredString,
+  validateBirthdayDate,
 } from '../lib/validation'
 import {
   toUserDto,
@@ -18,6 +21,9 @@ import {
   type UserSettingsDto,
   type UserSettingsRow,
 } from '../models'
+import { assertPhotoOwnership, keyFromPhotoUrl } from './photo-service'
+
+const MIN_BIRTH_YEAR = 1900
 
 export async function getUserSettings(env: Env, userId: string): Promise<UserSettingsRow> {
   const settings = await env.DB.prepare('SELECT * FROM user_settings WHERE user_id = ?')
@@ -41,6 +47,7 @@ export async function updateUser(env: Env, user: UserRow, body: unknown): Promis
   const input = asRecord(body)
   const updates: string[] = []
   const values: unknown[] = []
+  const previousPhotoKey = user.photo_url
 
   if (input.name !== undefined) {
     updates.push('display_name = ?')
@@ -56,6 +63,21 @@ export async function updateUser(env: Env, user: UserRow, body: unknown): Promis
     values.push(timezone)
   }
 
+  if (input.photoUrl !== undefined) {
+    const photo = optionalString(input.photoUrl, 'Profile photo', { max: 300 })
+    if (photo === null) {
+      updates.push('photo_url = NULL')
+    } else {
+      const key = keyFromPhotoUrl(photo)
+      assertPhotoOwnership(user.id, key)
+      if (!(await env.PHOTOS.head(key))) {
+        throw ApiError.validation('That profile photo no longer exists.', { field: 'photoUrl' })
+      }
+      updates.push('photo_url = ?')
+      values.push(key)
+    }
+  }
+
   if (updates.length === 0) {
     throw ApiError.validation('Nothing to update.', { field: 'body' })
   }
@@ -69,6 +91,50 @@ export async function updateUser(env: Env, user: UserRow, body: unknown): Promis
 
   const updated = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first<UserRow>()
   if (!updated) throw ApiError.server('Could not update the account.')
+
+  // Replace/remove the old object only after the account now points elsewhere.
+  // This also avoids deleting a photo that is still the active profile picture.
+  if (previousPhotoKey && previousPhotoKey !== updated.photo_url) {
+    await env.PHOTOS.delete(previousPhotoKey)
+  }
+  return toUserDto(updated)
+}
+
+/** Sets the signed-in user's own birthday exactly once. */
+export async function setUserBirthday(env: Env, user: UserRow, body: unknown): Promise<UserDto> {
+  if (user.birthday_month !== null) {
+    throw ApiError.conflict('Your birthday has already been set and cannot be changed.')
+  }
+
+  const input = asRecord(body)
+  const { month, day } = validateBirthdayDate(input.birthdayMonth, input.birthdayDay)
+  const currentYear = new Date().getUTCFullYear()
+  const birthYear = optionalInt(input.birthYear, 'Birth year', {
+    min: MIN_BIRTH_YEAR,
+    max: currentYear,
+  })
+
+  if (month === 2 && day === 29 && birthYear !== null && !isLeapYear(birthYear)) {
+    throw ApiError.validation(`${birthYear} was not a leap year, so it has no 29 February.`, {
+      field: 'birthYear',
+    })
+  }
+
+  const timestamp = nowIso()
+  const result = await env.DB.prepare(
+    `UPDATE users
+     SET birthday_month = ?, birthday_day = ?, birth_year = ?, updated_at = ?
+     WHERE id = ? AND birthday_month IS NULL`,
+  )
+    .bind(month, day, birthYear, timestamp, user.id)
+    .run()
+
+  if (result.meta.changes !== 1) {
+    throw ApiError.conflict('Your birthday has already been set and cannot be changed.')
+  }
+
+  const updated = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first<UserRow>()
+  if (!updated) throw ApiError.server('Could not update your birthday.')
   return toUserDto(updated)
 }
 
@@ -76,11 +142,7 @@ export async function getUserSettingsDto(env: Env, userId: string): Promise<User
   return toUserSettingsDto(await getUserSettings(env, userId))
 }
 
-export async function updateUserSettings(
-  env: Env,
-  userId: string,
-  body: unknown,
-): Promise<UserSettingsDto> {
+export async function updateUserSettings(env: Env, userId: string, body: unknown): Promise<UserSettingsDto> {
   const input = asRecord(body)
   const updates: string[] = []
   const values: unknown[] = []

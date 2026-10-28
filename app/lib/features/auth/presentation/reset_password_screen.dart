@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/navigation.dart';
 import '../../../app/theme.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/providers.dart';
@@ -13,7 +14,8 @@ class ResetPasswordScreen extends ConsumerStatefulWidget {
   final String token;
 
   @override
-  ConsumerState<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
@@ -34,7 +36,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     setState(() => _submitting = true);
 
     try {
-      await ref.read(apiProvider).resetPassword(
+      await ref
+          .read(apiProvider)
+          .resetPassword(
             token: widget.token,
             password: _passwordController.text,
             confirmation: _confirmController.text,
@@ -46,7 +50,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       context.go('/login');
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -60,12 +66,17 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     final missingToken = widget.token.isEmpty;
 
     return Scaffold(
-      appBar: AppBar(leading: BackButton(onPressed: () => context.go('/login'))),
+      appBar: AppBar(
+        leading: BackButton(onPressed: () => popOrGo(context, '/login')),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.screenPadding),
           children: [
-            Text('Choose a new password', style: text.displaySmall?.copyWith(fontSize: 28)),
+            Text(
+              'Choose a new password',
+              style: text.displaySmall?.copyWith(fontSize: 28),
+            ),
             const SizedBox(height: 8),
             if (missingToken)
               Text(
@@ -80,15 +91,22 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
-                      decoration: const InputDecoration(labelText: 'New password'),
+                      decoration: const InputDecoration(
+                        labelText: 'New password',
+                      ),
                       validator: Validators.password,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _confirmController,
                       obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Confirm password'),
-                      validator: (value) => Validators.confirmPassword(value, _passwordController.text),
+                      decoration: const InputDecoration(
+                        labelText: 'Confirm password',
+                      ),
+                      validator: (value) => Validators.confirmPassword(
+                        value,
+                        _passwordController.text,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     FilledButton(

@@ -2,32 +2,69 @@ import 'package:birthday_reminder/shared/models/birthday.dart';
 import 'package:birthday_reminder/shared/models/home_summary.dart';
 import 'package:birthday_reminder/shared/models/reminder.dart';
 import 'package:birthday_reminder/shared/models/user_settings.dart';
+import 'package:birthday_reminder/shared/models/app_user.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Map<String, dynamic> birthdayJson({Map<String, dynamic> overrides = const {}}) => {
-      'id': 'birthday-1',
-      'name': 'Sarah Tan',
-      'birthdayMonth': 9,
-      'birthdayDay': 30,
-      'birthYear': 2000,
-      'relationship': 'Friend',
-      'phone': null,
-      'email': null,
-      'photoUrl': null,
-      'notes': 'Likes travelling',
-      'giftIdeas': ['Perfume'],
-      'reminders': [
-        {'id': 'reminder-1', 'daysBefore': 7, 'reminderTime': '09:00', 'enabled': true},
-      ],
-      'nextOccurrence': '2026-09-30',
-      'daysUntil': 7,
-      'turningAge': 26,
-      'createdAt': '2026-01-01T00:00:00.000Z',
-      'updatedAt': '2026-01-02T00:00:00.000Z',
-      ...overrides,
-    };
+Map<String, dynamic> birthdayJson({
+  Map<String, dynamic> overrides = const {},
+}) => {
+  'id': 'birthday-1',
+  'name': 'Sarah Tan',
+  'birthdayMonth': 9,
+  'birthdayDay': 30,
+  'birthYear': 2000,
+  'relationship': 'Friend',
+  'phone': null,
+  'email': null,
+  'photoUrl': null,
+  'notes': 'Likes travelling',
+  'giftIdeas': ['Perfume'],
+  'reminders': [
+    {
+      'id': 'reminder-1',
+      'daysBefore': 7,
+      'reminderTime': '09:00',
+      'enabled': true,
+    },
+  ],
+  'nextOccurrence': '2026-09-30',
+  'daysUntil': 7,
+  'turningAge': 26,
+  'createdAt': '2026-01-01T00:00:00.000Z',
+  'updatedAt': '2026-01-02T00:00:00.000Z',
+  ...overrides,
+};
 
 void main() {
+  group('AppUser', () {
+    test('round-trips profile photo and one-time birthday fields', () {
+      final user = AppUser.fromJson(const {
+        'id': 'user-1',
+        'name': 'Jordan Davis',
+        'email': 'jordan@example.com',
+        'timezone': 'Asia/Kuala_Lumpur',
+        'photoUrl': '/api/photos/user-1/avatar.png',
+        'birthdayMonth': 1,
+        'birthdayDay': 15,
+        'birthYear': 1990,
+      });
+
+      expect(user.hasBirthday, isTrue);
+      expect(user.photoUrl, '/api/photos/user-1/avatar.png');
+      expect(AppUser.fromJson(user.toJson()).birthYear, 1990);
+    });
+
+    test('treats a missing birthday as incomplete', () {
+      const user = AppUser(
+        id: 'user-1',
+        name: 'Jordan Davis',
+        email: 'jordan@example.com',
+        timezone: 'UTC',
+      );
+      expect(user.hasBirthday, isFalse);
+    });
+  });
+
   group('Birthday', () {
     test('parses the API payload', () {
       final birthday = Birthday.fromJson(birthdayJson());
@@ -62,7 +99,10 @@ void main() {
     test('derives initials and a stable colour seed', () {
       final birthday = Birthday.fromJson(birthdayJson());
       expect(birthday.initials, 'ST');
-      expect(Birthday.fromJson(birthdayJson(overrides: {'name': 'Cher'})).initials, 'C');
+      expect(
+        Birthday.fromJson(birthdayJson(overrides: {'name': 'Cher'})).initials,
+        'C',
+      );
       expect(birthday.colorSeed, Birthday.fromJson(birthdayJson()).colorSeed);
     });
 
@@ -76,17 +116,43 @@ void main() {
 
   group('Reminder', () {
     test('labels each supported period', () {
-      expect(const Reminder(id: 'a', daysBefore: 0, reminderTime: '09:00', enabled: true).label,
-          'On birthday');
-      expect(const Reminder(id: 'a', daysBefore: 1, reminderTime: '09:00', enabled: true).label,
-          '1 day before');
-      expect(const Reminder(id: 'a', daysBefore: 30, reminderTime: '09:00', enabled: true).label,
-          '30 days before');
+      expect(
+        const Reminder(
+          id: 'a',
+          daysBefore: 0,
+          reminderTime: '09:00',
+          enabled: true,
+        ).label,
+        'On birthday',
+      );
+      expect(
+        const Reminder(
+          id: 'a',
+          daysBefore: 1,
+          reminderTime: '09:00',
+          enabled: true,
+        ).label,
+        '1 day before',
+      );
+      expect(
+        const Reminder(
+          id: 'a',
+          daysBefore: 30,
+          reminderTime: '09:00',
+          enabled: true,
+        ).label,
+        '30 days before',
+      );
       expect(Reminder.supportedDays, [0, 1, 3, 7, 14, 30]);
     });
 
     test('copies with a new time or enabled flag', () {
-      const reminder = Reminder(id: 'a', daysBefore: 7, reminderTime: '09:00', enabled: true);
+      const reminder = Reminder(
+        id: 'a',
+        daysBefore: 7,
+        reminderTime: '09:00',
+        enabled: true,
+      );
       expect(reminder.copyWith(reminderTime: '08:00').reminderTime, '08:00');
       expect(reminder.copyWith(enabled: false).enabled, isFalse);
       expect(reminder.copyWith().id, 'a');
@@ -97,7 +163,9 @@ void main() {
     test('parses today, upcoming and the monthly summary', () {
       final summary = HomeSummary.fromJson({
         'today': [birthdayJson()],
-        'upcoming': [birthdayJson(overrides: {'id': 'b', 'name': 'Alex Lim'})],
+        'upcoming': [
+          birthdayJson(overrides: {'id': 'b', 'name': 'Alex Lim'}),
+        ],
         'monthlySummary': {
           'month': 9,
           'monthName': 'September',
@@ -128,10 +196,16 @@ void main() {
     });
 
     test('parses and serialises theme modes', () {
-      final parsed = UserSettings.fromJson(const {'themeMode': 'dark', 'defaultDaysBefore': 1});
+      final parsed = UserSettings.fromJson(const {
+        'themeMode': 'dark',
+        'defaultDaysBefore': 1,
+      });
       expect(parsed.themeMode, AppThemeMode.dark);
       expect(parsed.defaultDaysBefore, 1);
-      expect(parsed.copyWith(themeMode: AppThemeMode.light).toJson()['themeMode'], 'light');
+      expect(
+        parsed.copyWith(themeMode: AppThemeMode.light).toJson()['themeMode'],
+        'light',
+      );
     });
   });
 }

@@ -23,8 +23,7 @@ release build must be pointed at an `https://` API:
 
 ```bash
 flutter build appbundle --release \
-  --dart-define=API_BASE_URL=https://your-worker.workers.dev \
-  --dart-define=APP_VERSION=1.2.0
+  --dart-define=API_BASE_URL=https://your-worker.workers.dev
 ```
 
 ## Structure
@@ -62,5 +61,5 @@ Set `JAVA_HOME` to a JDK 17 or newer installation before running Gradle.
 Release builds read `android/key.properties` when it exists and otherwise fall back to the debug keys,
 so you can build without the upload keystore. See the deployment runbook for creating one.
 
-`APP_VERSION` controls the version shown in Settings → About. It defaults to `1.0.0` when omitted;
-the package itself is currently versioned `1.2.0+6`.
+Settings → About reads the installed package version and build number from `pubspec.yaml`. The
+package is currently versioned `1.3.0+7`.

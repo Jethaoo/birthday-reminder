@@ -20,9 +20,12 @@ class FakeApi implements BirthdayReminderApi {
       name: 'Jordan Davis',
       email: 'jordan@example.com',
       timezone: 'Asia/Kuala_Lumpur',
+      birthdayMonth: 1,
+      birthdayDay: 15,
+      birthYear: 1990,
     ),
-  })  : birthdaysValue = birthdays ?? [],
-        homeValue = home ?? HomeSummary.empty;
+  }) : birthdaysValue = birthdays ?? [],
+       homeValue = home ?? HomeSummary.empty;
 
   final List<Birthday> birthdaysValue;
   HomeSummary homeValue;
@@ -37,8 +40,11 @@ class FakeApi implements BirthdayReminderApi {
   final List<BirthdayQuery> queries = [];
   final List<Uint8List> uploads = [];
   ApiException? nextError;
-  TestNotificationResult testNotificationResult =
-      const TestNotificationResult(sent: 1, failed: 0, simulated: false);
+  TestNotificationResult testNotificationResult = const TestNotificationResult(
+    sent: 1,
+    failed: 0,
+    simulated: false,
+  );
 
   void _record(String name) => calls[name] = (calls[name] ?? 0) + 1;
 
@@ -61,7 +67,8 @@ class FakeApi implements BirthdayReminderApi {
   void setAuthToken(String? token) => authToken = token;
 
   @override
-  set onUnauthorized(void Function()? callback) => onUnauthorizedCallback = callback;
+  set onUnauthorized(void Function()? callback) =>
+      onUnauthorizedCallback = callback;
 
   void Function()? onUnauthorizedCallback;
 
@@ -128,6 +135,30 @@ class FakeApi implements BirthdayReminderApi {
   }
 
   @override
+  Future<AppUser> updateProfilePhoto(String? photoUrl) async {
+    _record('updateProfilePhoto');
+    _maybeThrow();
+    user = user.copyWith(photoUrl: photoUrl, clearPhoto: photoUrl == null);
+    return user;
+  }
+
+  @override
+  Future<AppUser> setMyBirthday({
+    required int birthdayMonth,
+    required int birthdayDay,
+    int? birthYear,
+  }) async {
+    _record('setMyBirthday');
+    _maybeThrow();
+    user = user.copyWith(
+      birthdayMonth: birthdayMonth,
+      birthdayDay: birthdayDay,
+      birthYear: birthYear,
+    );
+    return user;
+  }
+
+  @override
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -175,9 +206,11 @@ class FakeApi implements BirthdayReminderApi {
     if (query.search != null && query.search!.isNotEmpty) {
       final term = query.search!.toLowerCase();
       items = items
-          .where((birthday) =>
-              birthday.name.toLowerCase().contains(term) ||
-              (birthday.notes ?? '').toLowerCase().contains(term))
+          .where(
+            (birthday) =>
+                birthday.name.toLowerCase().contains(term) ||
+                (birthday.notes ?? '').toLowerCase().contains(term),
+          )
           .toList();
     }
     if (query.filter == 'today') {
@@ -203,7 +236,9 @@ class FakeApi implements BirthdayReminderApi {
   Future<Birthday> createBirthday(Birthday birthday) async {
     _record('createBirthday');
     _maybeThrow();
-    final saved = birthday.copyWith().copyWithId('birthday-${created.length + 1}');
+    final saved = birthday.copyWith().copyWithId(
+      'birthday-${created.length + 1}',
+    );
     created.add(saved);
     birthdaysValue.add(saved);
     return saved;
@@ -231,7 +266,9 @@ class FakeApi implements BirthdayReminderApi {
   Future<List<Reminder>> reminders(String birthdayId) async {
     _record('reminders');
     _maybeThrow();
-    return birthdaysValue.firstWhere((birthday) => birthday.id == birthdayId).reminders;
+    return birthdaysValue
+        .firstWhere((birthday) => birthday.id == birthdayId)
+        .reminders;
   }
 
   @override
@@ -255,14 +292,21 @@ class FakeApi implements BirthdayReminderApi {
   }
 
   @override
-  Future<CalendarMonth> calendar({required int month, required int year}) async {
+  Future<CalendarMonth> calendar({
+    required int month,
+    required int year,
+  }) async {
     _record('calendar');
     _maybeThrow();
-    return calendarValue ?? CalendarMonth(month: month, year: year, days: const []);
+    return calendarValue ??
+        CalendarMonth(month: month, year: year, days: const []);
   }
 
   @override
-  Future<String?> registerDevice({required String fcmToken, String? deviceName}) async {
+  Future<String?> registerDevice({
+    required String fcmToken,
+    String? deviceName,
+  }) async {
     _record('registerDevice');
     _maybeThrow();
     return registeredDeviceId;
@@ -276,18 +320,29 @@ class FakeApi implements BirthdayReminderApi {
   }
 
   @override
-  Future<TestNotificationResult> sendTestNotification({String? birthdayId}) async {
+  Future<TestNotificationResult> sendTestNotification({
+    String? birthdayId,
+  }) async {
     _record('sendTestNotification');
     _maybeThrow();
     return testNotificationResult;
   }
 
   @override
-  Future<String> uploadPhoto({required Uint8List bytes, required String filename}) async {
+  Future<String> uploadPhoto({
+    required Uint8List bytes,
+    required String filename,
+  }) async {
     _record('uploadPhoto');
     uploads.add(bytes);
     _maybeThrow();
     return '/api/photos/photos/${user.id}/photo.png';
+  }
+
+  @override
+  Future<void> deletePhoto(String relativeUrl) async {
+    _record('deletePhoto');
+    _maybeThrow();
   }
 
   @override
@@ -296,20 +351,20 @@ class FakeApi implements BirthdayReminderApi {
 
 extension on Birthday {
   Birthday copyWithId(String newId) => Birthday(
-        id: newId,
-        name: name,
-        birthdayMonth: birthdayMonth,
-        birthdayDay: birthdayDay,
-        birthYear: birthYear,
-        relationship: relationship,
-        phone: phone,
-        email: email,
-        photoUrl: photoUrl,
-        notes: notes,
-        giftIdeas: giftIdeas,
-        reminders: reminders,
-        nextOccurrence: nextOccurrence,
-        daysUntil: daysUntil,
-        turningAge: turningAge,
-      );
+    id: newId,
+    name: name,
+    birthdayMonth: birthdayMonth,
+    birthdayDay: birthdayDay,
+    birthYear: birthYear,
+    relationship: relationship,
+    phone: phone,
+    email: email,
+    photoUrl: photoUrl,
+    notes: notes,
+    giftIdeas: giftIdeas,
+    reminders: reminders,
+    nextOccurrence: nextOccurrence,
+    daysUntil: daysUntil,
+    turningAge: turningAge,
+  );
 }

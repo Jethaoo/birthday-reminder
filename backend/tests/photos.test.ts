@@ -3,8 +3,8 @@ import { env } from 'cloudflare:test'
 import { api, createBirthday, json, registerUser } from './helpers'
 
 const PNG_BYTES = new Uint8Array([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00,
+  0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
 ])
 
 function photoForm(bytes: Uint8Array = PNG_BYTES, name = 'birthday.png', type = 'image/png'): FormData {
@@ -127,5 +127,41 @@ describe('photo upload', () => {
 
     await api('DELETE', `/api/birthdays/${birthday.id}`, { token: user.token })
     expect(await env.PHOTOS.get(upload.key)).toBeNull()
+  })
+
+  it('sets, replaces and removes an account profile photo', async () => {
+    const user = await registerUser()
+    const first = await json<UploadBody>(
+      await api('POST', '/api/photos', { token: user.token, formData: photoForm() }),
+    )
+
+    const attached = await api('PATCH', '/api/me', {
+      token: user.token,
+      body: { photoUrl: first.url },
+    })
+    expect(attached.status).toBe(200)
+    expect(await json<{ user: { photoUrl: string } }>(attached)).toMatchObject({
+      user: { photoUrl: first.url },
+    })
+
+    const second = await json<UploadBody>(
+      await api('POST', '/api/photos', { token: user.token, formData: photoForm() }),
+    )
+    const replaced = await api('PATCH', '/api/me', {
+      token: user.token,
+      body: { photoUrl: second.url },
+    })
+    expect(replaced.status).toBe(200)
+    expect(await env.PHOTOS.get(first.key)).toBeNull()
+
+    const removed = await api('PATCH', '/api/me', {
+      token: user.token,
+      body: { photoUrl: null },
+    })
+    expect(removed.status).toBe(200)
+    expect(await json<{ user: { photoUrl: null } }>(removed)).toMatchObject({
+      user: { photoUrl: null },
+    })
+    expect(await env.PHOTOS.get(second.key)).toBeNull()
   })
 })

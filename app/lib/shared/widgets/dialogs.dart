@@ -40,25 +40,38 @@ Future<bool> showConfirmDialog(
   return result ?? false;
 }
 
-Future<bool> confirmDeleteBirthday(BuildContext context, String name) => showConfirmDialog(
-      context,
-      title: 'Delete birthday?',
-      message: "Are you sure you want to delete $name's birthday? This action cannot be undone.",
-      confirmLabel: 'Delete',
-    );
+Future<bool> confirmDeleteBirthday(
+  BuildContext context,
+  String name,
+) => showConfirmDialog(
+  context,
+  title: 'Delete birthday?',
+  message:
+      "Are you sure you want to delete $name's birthday? This action cannot be undone.",
+  confirmLabel: 'Delete',
+);
 
 Future<bool> confirmLogout(BuildContext context) => showConfirmDialog(
-      context,
-      title: 'Log out?',
-      message: 'You will need to sign in again to see your birthdays.',
-      confirmLabel: 'Log out',
-      destructive: false,
-    );
+  context,
+  title: 'Log out?',
+  message: 'You will need to sign in again to see your birthdays.',
+  confirmLabel: 'Log out',
+  destructive: false,
+);
 
 Future<bool> confirmDeleteAccount(BuildContext context) => showConfirmDialog(
-      context,
-      title: 'Delete account?',
-      message:
-          'This permanently removes your account, birthdays, reminders, device registrations and uploaded photos.',
-      confirmLabel: 'Delete account',
-    );
+  context,
+  title: 'Delete account?',
+  message:
+      'This permanently removes your account, birthdays, reminders, device registrations and uploaded photos.',
+  confirmLabel: 'Delete account',
+);
+
+Future<bool> confirmExitApp(BuildContext context) => showConfirmDialog(
+  context,
+  title: 'Exit app?',
+  message: 'Do you want to exit Birthday Reminder?',
+  confirmLabel: 'Exit',
+  cancelLabel: 'Stay',
+  destructive: false,
+);

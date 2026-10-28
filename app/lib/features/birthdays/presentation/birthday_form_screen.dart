@@ -44,12 +44,15 @@ class BirthdayFormScreen extends ConsumerWidget {
       error: (error, _) => Scaffold(
         appBar: AppBar(title: const Text('Edit birthday')),
         body: ErrorView(
-          message: error is ApiException ? error.message : 'Could not load this birthday.',
+          message: error is ApiException
+              ? error.message
+              : 'Could not load this birthday.',
           onRetry: () => ref.invalidate(birthdayDetailProvider(id)),
         ),
       ),
       // Keyed by id so opening a different record rebuilds the form state.
-      data: (birthday) => _BirthdayForm(key: ValueKey(birthday.id), existing: birthday),
+      data: (birthday) =>
+          _BirthdayForm(key: ValueKey(birthday.id), existing: birthday),
     );
   }
 }
@@ -144,9 +147,13 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                     decoration: const InputDecoration(labelText: 'Month'),
                     items: [
                       for (var index = 1; index <= 12; index += 1)
-                        DropdownMenuItem(value: index, child: Text(monthName(index))),
+                        DropdownMenuItem(
+                          value: index,
+                          child: Text(monthName(index)),
+                        ),
                     ],
-                    onChanged: (value) => setDialogState(() => month = value ?? month),
+                    onChanged: (value) =>
+                        setDialogState(() => month = value ?? month),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -159,7 +166,8 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                       for (var index = 1; index <= maxDay; index += 1)
                         DropdownMenuItem(value: index, child: Text('$index')),
                     ],
-                    onChanged: (value) => setDialogState(() => day = value ?? day),
+                    onChanged: (value) =>
+                        setDialogState(() => day = value ?? day),
                   ),
                 ),
               ],
@@ -167,7 +175,9 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                style: TextButton.styleFrom(foregroundColor: palette.textSecondary),
+                style: TextButton.styleFrom(
+                  foregroundColor: palette.textSecondary,
+                ),
                 child: const Text('Cancel'),
               ),
               FilledButton(
@@ -191,7 +201,11 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
 
   Future<void> _pickPhoto() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 2400, imageQuality: 92);
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 2400,
+      imageQuality: 92,
+    );
     if (picked == null) return;
 
     setState(() => _uploadingPhoto = true);
@@ -211,11 +225,15 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
         // Fall back to the original bytes when compression is unavailable.
       }
 
-      final url = await ref.read(apiProvider).uploadPhoto(bytes: bytes, filename: picked.name);
+      final url = await ref
+          .read(apiProvider)
+          .uploadPhoto(bytes: bytes, filename: picked.name);
       if (mounted) setState(() => _photoUrl = url);
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) setState(() => _uploadingPhoto = false);
@@ -226,7 +244,9 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
     final settings = await ref.read(settingsProvider.future);
     setState(() {
       _reminders = [
-        ..._reminders.where((reminder) => reminder.daysBefore != settings.defaultDaysBefore),
+        ..._reminders.where(
+          (reminder) => reminder.daysBefore != settings.defaultDaysBefore,
+        ),
         Reminder(
           id: 'new-${settings.defaultDaysBefore}',
           daysBefore: settings.defaultDaysBefore,
@@ -247,28 +267,47 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
   }
 
   Birthday _buildBirthday() => Birthday(
-        id: widget.existing?.id ?? '',
-        name: _nameController.text.trim(),
-        birthdayMonth: _month!,
-        birthdayDay: _day!,
-        birthYear: int.tryParse(_yearController.text.trim()),
-        relationship: (_relationship == null || _relationship!.isEmpty) ? null : _relationship,
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-        photoUrl: _photoUrl,
-        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
-        giftIdeas: _giftIdeas,
-        reminders: _remindersEnabled ? _reminders : const [],
-        nextOccurrence: DateTime.now(),
-        daysUntil: 0,
-      );
+    id: widget.existing?.id ?? '',
+    name: _nameController.text.trim(),
+    birthdayMonth: _month!,
+    birthdayDay: _day!,
+    birthYear: int.tryParse(_yearController.text.trim()),
+    relationship: (_relationship == null || _relationship!.isEmpty)
+        ? null
+        : _relationship,
+    phone: _phoneController.text.trim().isEmpty
+        ? null
+        : _phoneController.text.trim(),
+    email: _emailController.text.trim().isEmpty
+        ? null
+        : _emailController.text.trim(),
+    photoUrl: _photoUrl,
+    notes: _notesController.text.trim().isEmpty
+        ? null
+        : _notesController.text.trim(),
+    giftIdeas: _giftIdeas,
+    reminders: _remindersEnabled ? _reminders : const [],
+    nextOccurrence: DateTime.now(),
+    daysUntil: 0,
+  );
+
+  void _showSavedBirthday(Birthday saved) {
+    // Editing already has the details page underneath. Creating a new record
+    // replaces the form with its details page, keeping the original page below
+    // the pair so Back still reaches it.
+    if (_isEditing && context.canPop()) {
+      context.pop();
+    } else {
+      context.pushReplacement('/birthdays/${saved.id}');
+    }
+  }
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_month == null || _day == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick the birthday date.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Pick the birthday date.')));
       return;
     }
     if (_remindersEnabled && _reminders.isEmpty) {
@@ -280,9 +319,11 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
 
     try {
       final birthday = _buildBirthday();
-      final saved = _isEditing ? await actions.update(birthday) : await actions.create(birthday);
+      final saved = _isEditing
+          ? await actions.update(birthday)
+          : await actions.create(birthday);
       if (!mounted) return;
-      context.go('/birthdays/${saved.id}');
+      _showSavedBirthday(saved);
     } on ApiException catch (error) {
       if (!mounted) return;
 
@@ -292,7 +333,9 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
           context: context,
           builder: (context) => AlertDialog(
             title: Text(_nameController.text.trim()),
-            content: const Text('This birthday already exists. Update the existing entry instead?'),
+            content: const Text(
+              'This birthday already exists. Update the existing entry instead?',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -312,17 +355,23 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
             // The update replaces every field it sends, so start from the saved
             // record and only fill in what the user entered here.
             final existing = await ref.read(apiProvider).birthday(existingId);
-            final saved = await actions.update(existing.mergedWith(_buildBirthday()));
-            if (mounted) context.go('/birthdays/${saved.id}');
+            final saved = await actions.update(
+              existing.mergedWith(_buildBirthday()),
+            );
+            if (mounted) _showSavedBirthday(saved);
             return;
           } on ApiException catch (retryError) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(retryError.message)));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(retryError.message)));
             }
           }
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -335,7 +384,9 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
     final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit birthday' : 'Add birthday')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit birthday' : 'Add birthday'),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -352,7 +403,10 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                   PersonAvatar(
                     initials: _nameController.text.trim().isEmpty
                         ? '?'
-                        : _nameController.text.trim().substring(0, 1).toUpperCase(),
+                        : _nameController.text
+                              .trim()
+                              .substring(0, 1)
+                              .toUpperCase(),
                     colorSeed: _nameController.text.length,
                     size: 84,
                     photoUrl: _photoUrl,
@@ -367,15 +421,21 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                             ? const SizedBox(
                                 height: 16,
                                 width: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.photo_camera_outlined, size: 18),
-                        label: Text(_photoUrl == null ? 'Add photo' : 'Change photo'),
+                        label: Text(
+                          _photoUrl == null ? 'Add photo' : 'Change photo',
+                        ),
                       ),
                       if (_photoUrl != null)
                         TextButton(
                           onPressed: () => setState(() => _photoUrl = null),
-                          style: TextButton.styleFrom(foregroundColor: palette.error),
+                          style: TextButton.styleFrom(
+                            foregroundColor: palette.error,
+                          ),
                           child: const Text('Remove'),
                         ),
                     ],
@@ -387,7 +447,10 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
             TextFormField(
               controller: _nameController,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(labelText: 'Name *', hintText: 'Sarah Tan'),
+              decoration: const InputDecoration(
+                labelText: 'Name *',
+                hintText: 'Sarah Tan',
+              ),
               validator: Validators.name,
               onChanged: (_) => setState(() {}),
             ),
@@ -402,7 +465,9 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                       ? 'Select month and day'
                       : '$_day ${monthName(_month!)}',
                   style: text.bodyLarge?.copyWith(
-                    color: _month == null ? palette.textSecondary : palette.textPrimary,
+                    color: _month == null
+                        ? palette.textSecondary
+                        : palette.textPrimary,
                   ),
                 ),
               ),
@@ -428,9 +493,15 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Relationship'),
               items: [
-                const DropdownMenuItem<String>(value: null, child: Text('None')),
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('None'),
+                ),
                 for (final relationship in _relationships)
-                  DropdownMenuItem(value: relationship, child: Text(relationship)),
+                  DropdownMenuItem(
+                    value: relationship,
+                    child: Text(relationship),
+                  ),
               ],
               onChanged: (value) => setState(() => _relationship = value),
             ),
@@ -466,7 +537,9 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                 Expanded(
                   child: TextField(
                     controller: _giftController,
-                    decoration: const InputDecoration(hintText: 'Add a gift idea'),
+                    decoration: const InputDecoration(
+                      hintText: 'Add a gift idea',
+                    ),
                     onSubmitted: (_) => _addGiftIdea(),
                   ),
                 ),
@@ -475,7 +548,10 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                   onPressed: _addGiftIdea,
                   icon: const Icon(Icons.add),
                   tooltip: 'Add gift idea',
-                  style: IconButton.styleFrom(backgroundColor: palette.primary, foregroundColor: palette.onPrimary),
+                  style: IconButton.styleFrom(
+                    backgroundColor: palette.primary,
+                    foregroundColor: palette.onPrimary,
+                  ),
                 ),
               ],
             ),
@@ -489,7 +565,9 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                     Chip(
                       label: Text(idea),
                       onDeleted: () => setState(
-                        () => _giftIdeas = _giftIdeas.where((entry) => entry != idea).toList(),
+                        () => _giftIdeas = _giftIdeas
+                            .where((entry) => entry != idea)
+                            .toList(),
                       ),
                       deleteIcon: const Icon(Icons.close, size: 16),
                     ),
@@ -525,9 +603,11 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                           value: reminder.enabled,
                           onChanged: (value) => setState(() {
                             _reminders = _reminders
-                                .map((entry) => entry.id == reminder.id
-                                    ? entry.copyWith(enabled: value)
-                                    : entry)
+                                .map(
+                                  (entry) => entry.id == reminder.id
+                                      ? entry.copyWith(enabled: value)
+                                      : entry,
+                                )
                                 .toList();
                           }),
                         ),
@@ -538,7 +618,10 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                                 .where((entry) => entry.id != reminder.id)
                                 .toList(),
                           ),
-                          icon: Icon(Icons.delete_outline, color: palette.error),
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: palette.error,
+                          ),
                         ),
                       ],
                     ),
@@ -554,11 +637,16 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                       if (picked == null) return;
                       setState(() {
                         _reminders = _reminders
-                            .map((entry) => entry.id == reminder.id
-                                ? entry.copyWith(
-                                    reminderTime: toReminderTimeValue(picked.hour, picked.minute),
-                                  )
-                                : entry)
+                            .map(
+                              (entry) => entry.id == reminder.id
+                                  ? entry.copyWith(
+                                      reminderTime: toReminderTimeValue(
+                                        picked.hour,
+                                        picked.minute,
+                                      ),
+                                    )
+                                  : entry,
+                            )
                             .toList();
                       });
                     },
@@ -566,8 +654,13 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
                 ),
               OutlinedButton.icon(
                 onPressed: () async {
-                  final created = await showAddReminderDialog(context, existing: _reminders);
-                  if (created != null) setState(() => _reminders = [..._reminders, created]);
+                  final created = await showAddReminderDialog(
+                    context,
+                    existing: _reminders,
+                  );
+                  if (created != null) {
+                    setState(() => _reminders = [..._reminders, created]);
+                  }
                 },
                 icon: const Icon(Icons.add_alarm_outlined, size: 18),
                 label: const Text('Add another reminder'),
@@ -581,7 +674,11 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
         primary: FilledButton(
           onPressed: _saving ? null : _save,
           child: _saving
-              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : Text(_isEditing ? 'Save changes' : 'Save birthday'),
         ),
         // Importing a contact only makes sense for a birthday that does not

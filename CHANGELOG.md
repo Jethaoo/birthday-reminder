@@ -10,11 +10,25 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
 
 ### Upgrade notes
 
+- **backend:** apply migration `0003_user_profile.sql` before deploying the profile photo and
+  one-time birthday features.
 - **backend:** apply migration `0002_notification_retries.sql` to each D1 database **before**
   deploying this version (`wrangler d1 migrations apply <db> --env <env> --remote`). The new
   reminder engine writes the `attempts`, `retryable` and `updated_at` columns it adds.
 - **backend:** if staging has been running an earlier version, rotate any account passwords there:
   earlier versions returned password-reset tokens from staging (see Security).
+
+### Added
+
+- **app:** The Account page can add, replace and remove a private profile photo.
+- **app/backend:** Every account must set its own birthday once and cannot change it afterward.
+- **app:** The Home profile avatar opens Account directly.
+
+### Changed
+
+- **app:** About reads the installed package version and build number instead of using a separate
+  compile-time default.
+- **app:** Android Back unwinds visited tabs, and Home asks for confirmation before exiting.
 
 ### Security
 

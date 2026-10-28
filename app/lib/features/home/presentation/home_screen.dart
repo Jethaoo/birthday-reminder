@@ -8,6 +8,7 @@ import '../../../core/providers.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../shared/models/home_summary.dart';
 import '../../../shared/widgets/birthday_tile.dart';
+import '../../../shared/widgets/person_avatar.dart';
 import '../../../shared/widgets/states.dart';
 import '../home_providers.dart';
 
@@ -60,7 +61,9 @@ class HomeScreen extends ConsumerWidget {
               _Header(
                 greeting: _greeting(),
                 initials: user?.initials ?? '?',
-                onProfileTap: () => context.go('/settings'),
+                name: user?.name ?? '',
+                photoUrl: user?.photoUrl,
+                onProfileTap: () => context.push('/settings/account'),
               ),
               const SizedBox(height: 28),
               _TodaySection(summary: summary),
@@ -78,7 +81,8 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 EmptyState(
                   title: 'No birthdays yet',
-                  message: 'Add your first birthday and never forget an important date.',
+                  message:
+                      'Add your first birthday and never forget an important date.',
                   action: FilledButton(
                     onPressed: () => context.push('/birthdays/new'),
                     child: const Text('Add birthday'),
@@ -101,10 +105,18 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.greeting, required this.initials, required this.onProfileTap});
+  const _Header({
+    required this.greeting,
+    required this.initials,
+    required this.name,
+    required this.onProfileTap,
+    this.photoUrl,
+  });
 
   final String greeting;
   final String initials;
+  final String name;
+  final String? photoUrl;
   final VoidCallback onProfileTap;
 
   @override
@@ -122,7 +134,10 @@ class _Header extends StatelessWidget {
             children: [
               Text(
                 weekdayDate(DateTime.now()),
-                style: text.bodySmall?.copyWith(color: palette.textSecondary, fontWeight: FontWeight.w600),
+                style: text.bodySmall?.copyWith(
+                  color: palette.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 6),
               Text('$greeting 👋', style: text.displaySmall),
@@ -131,19 +146,15 @@ class _Header extends StatelessWidget {
         ),
         Semantics(
           button: true,
-          label: 'Open settings',
+          label: 'Open account',
           child: InkWell(
             onTap: onProfileTap,
             borderRadius: BorderRadius.circular(999),
-            child: Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: palette.primary, shape: BoxShape.circle),
-              child: Text(
-                initials,
-                style: text.labelLarge?.copyWith(color: palette.onPrimary),
-              ),
+            child: PersonAvatar(
+              initials: initials,
+              colorSeed: name.codeUnits.fold<int>(0, (sum, unit) => sum + unit),
+              size: 44,
+              photoUrl: photoUrl,
             ),
           ),
         ),
@@ -169,7 +180,10 @@ class _TodaySection extends StatelessWidget {
           title: "Today's birthdays",
           trailing: today.isEmpty
               ? null
-              : StatusPill(label: '${today.length} today', background: palette.softPink),
+              : StatusPill(
+                  label: '${today.length} today',
+                  background: palette.softPink,
+                ),
         ),
         if (today.isEmpty)
           Container(
@@ -183,9 +197,15 @@ class _TodaySection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('No birthdays today', style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  'No birthdays today',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 const SizedBox(height: 4),
-                Text('Enjoy the day! 🎉', style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  'Enjoy the day! 🎉',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           )

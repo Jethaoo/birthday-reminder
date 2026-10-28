@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/providers.dart';
 
-class AboutScreen extends StatelessWidget {
+String _versionLabel(PackageInfo info) {
+  return info.buildNumber.isEmpty
+      ? info.version
+      : '${info.version}+${info.buildNumber}';
+}
+
+class AboutScreen extends ConsumerWidget {
   const AboutScreen({super.key});
 
-  static const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
+    final package = ref.watch(packageInfoProvider);
+    final version = package.maybeWhen(data: _versionLabel, orElse: () => null);
 
     return Scaffold(
       appBar: AppBar(title: const Text('About')),
@@ -19,9 +28,15 @@ class AboutScreen extends StatelessWidget {
         children: [
           const Text('🎂', style: TextStyle(fontSize: 40)),
           const SizedBox(height: 12),
-          Text('Birthday Reminder', style: text.displaySmall?.copyWith(fontSize: 26)),
+          Text(
+            'Birthday Reminder',
+            style: text.displaySmall?.copyWith(fontSize: 26),
+          ),
           const SizedBox(height: 6),
-          Text('Version $appVersion', style: text.bodySmall),
+          Text(
+            version == null ? 'Version unavailable' : 'Version $version',
+            style: text.bodySmall,
+          ),
           const SizedBox(height: 20),
           Text(
             'Save the birthdays that matter, get a reminder before the day and keep gift ideas in one place. '
@@ -48,7 +63,7 @@ class AboutScreen extends StatelessWidget {
                   onTap: () => showLicensePage(
                     context: context,
                     applicationName: 'Birthday Reminder',
-                    applicationVersion: appVersion,
+                    applicationVersion: version,
                   ),
                 ),
               ],

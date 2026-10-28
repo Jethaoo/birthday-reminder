@@ -20,13 +20,18 @@ class AuthSession {
 /// Outcome of a development test push, so the app can report what really
 /// happened instead of assuming success.
 class TestNotificationResult {
-  const TestNotificationResult({required this.sent, required this.failed, required this.simulated});
+  const TestNotificationResult({
+    required this.sent,
+    required this.failed,
+    required this.simulated,
+  });
 
   final int sent;
   final int failed;
   final bool simulated;
 
-  factory TestNotificationResult.fromJson(Map<String, dynamic> json) => TestNotificationResult(
+  factory TestNotificationResult.fromJson(Map<String, dynamic> json) =>
+      TestNotificationResult(
         sent: json['sent'] as int? ?? 0,
         failed: json['failed'] as int? ?? 0,
         simulated: json['simulated'] as bool? ?? false,
@@ -59,7 +64,12 @@ class BirthdayQuery {
 }
 
 class BirthdayPage {
-  const BirthdayPage({required this.items, required this.total, required this.limit, required this.offset});
+  const BirthdayPage({
+    required this.items,
+    required this.total,
+    required this.limit,
+    required this.offset,
+  });
 
   final List<Birthday> items;
   final int total;
@@ -87,17 +97,33 @@ abstract class BirthdayReminderApi {
     required String timezone,
   });
 
-  Future<AuthSession> login({required String email, required String password, required String timezone});
+  Future<AuthSession> login({
+    required String email,
+    required String password,
+    required String timezone,
+  });
 
   Future<void> logout();
 
   Future<void> forgotPassword(String email);
 
-  Future<void> resetPassword({required String token, required String password, required String confirmation});
+  Future<void> resetPassword({
+    required String token,
+    required String password,
+    required String confirmation,
+  });
 
   Future<AppUser> me();
 
   Future<AppUser> updateMe({String? name, String? timezone});
+
+  Future<AppUser> updateProfilePhoto(String? photoUrl);
+
+  Future<AppUser> setMyBirthday({
+    required int birthdayMonth,
+    required int birthdayDay,
+    int? birthYear,
+  });
 
   Future<void> changePassword({
     required String currentPassword,
@@ -134,14 +160,22 @@ abstract class BirthdayReminderApi {
   Future<CalendarMonth> calendar({required int month, required int year});
 
   /// Registers the FCM token and returns the server's device id.
-  Future<String?> registerDevice({required String fcmToken, String? deviceName});
+  Future<String?> registerDevice({
+    required String fcmToken,
+    String? deviceName,
+  });
 
   /// Stops notifications to this device, called on sign-out.
   Future<void> unregisterDevice(String deviceId);
 
   Future<TestNotificationResult> sendTestNotification({String? birthdayId});
 
-  Future<String> uploadPhoto({required Uint8List bytes, required String filename});
+  Future<String> uploadPhoto({
+    required Uint8List bytes,
+    required String filename,
+  });
+
+  Future<void> deletePhoto(String relativeUrl);
 
   Future<Uint8List> photoBytes(String relativeUrl);
 
@@ -150,14 +184,15 @@ abstract class BirthdayReminderApi {
 
 class HttpBirthdayReminderApi implements BirthdayReminderApi {
   HttpBirthdayReminderApi({required this.baseUrl, Dio? dio})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 20),
-                validateStatus: (status) => status != null && status < 500,
-              ),
-            ) {
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 20),
+              validateStatus: (status) => status != null && status < 500,
+            ),
+          ) {
     _dio.options.baseUrl = baseUrl;
   }
 
@@ -188,8 +223,12 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
   @override
   String absoluteUrl(String relativePath) {
     if (relativePath.startsWith('http')) return relativePath;
-    final root = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
-    return relativePath.startsWith('/') ? '$root$relativePath' : '$root/$relativePath';
+    final root = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    return relativePath.startsWith('/')
+        ? '$root$relativePath'
+        : '$root/$relativePath';
   }
 
   /// True when [url] points at the configured backend, so the bearer token is
@@ -198,7 +237,9 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
     final target = Uri.tryParse(url);
     final backend = Uri.tryParse(baseUrl);
     if (target == null || backend == null) return false;
-    return target.scheme == backend.scheme && target.host == backend.host && target.port == backend.port;
+    return target.scheme == backend.scheme &&
+        target.host == backend.host &&
+        target.port == backend.port;
   }
 
   Future<Map<String, dynamic>> _request(
@@ -264,7 +305,9 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
             return ApiException(
               apiErrorCodeFrom(payload['code'] as String?),
               payload['message'] as String? ?? 'Something went wrong.',
-              field: (payload['details'] as Map<String, dynamic>?)?['field'] as String?,
+              field:
+                  (payload['details'] as Map<String, dynamic>?)?['field']
+                      as String?,
               details: payload['details'] as Map<String, dynamic>?,
             );
           }
@@ -284,13 +327,17 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
     required String confirmation,
     required String timezone,
   }) async {
-    final json = await _request('POST', '/api/auth/register', body: {
-      'name': name,
-      'email': email,
-      'password': password,
-      'confirmPassword': confirmation,
-      'timezone': timezone,
-    });
+    final json = await _request(
+      'POST',
+      '/api/auth/register',
+      body: {
+        'name': name,
+        'email': email,
+        'password': password,
+        'confirmPassword': confirmation,
+        'timezone': timezone,
+      },
+    );
     return _session(json);
   }
 
@@ -300,18 +347,18 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
     required String password,
     required String timezone,
   }) async {
-    final json = await _request('POST', '/api/auth/login', body: {
-      'email': email,
-      'password': password,
-      'timezone': timezone,
-    });
+    final json = await _request(
+      'POST',
+      '/api/auth/login',
+      body: {'email': email, 'password': password, 'timezone': timezone},
+    );
     return _session(json);
   }
 
   AuthSession _session(Map<String, dynamic> json) => AuthSession(
-        user: AppUser.fromJson(json['user'] as Map<String, dynamic>),
-        accessToken: json['accessToken'] as String,
-      );
+    user: AppUser.fromJson(json['user'] as Map<String, dynamic>),
+    accessToken: json['accessToken'] as String,
+  );
 
   @override
   Future<void> logout() async {
@@ -330,11 +377,15 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
     required String password,
     required String confirmation,
   }) async {
-    await _request('POST', '/api/auth/reset-password', body: {
-      'token': token,
-      'password': password,
-      'confirmPassword': confirmation,
-    });
+    await _request(
+      'POST',
+      '/api/auth/reset-password',
+      body: {
+        'token': token,
+        'password': password,
+        'confirmPassword': confirmation,
+      },
+    );
   }
 
   @override
@@ -345,10 +396,39 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
 
   @override
   Future<AppUser> updateMe({String? name, String? timezone}) async {
-    final json = await _request('PATCH', '/api/me', body: {
-      'name': ?name,
-      'timezone': ?timezone,
-    });
+    final json = await _request(
+      'PATCH',
+      '/api/me',
+      body: {'name': ?name, 'timezone': ?timezone},
+    );
+    return AppUser.fromJson(json['user'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<AppUser> updateProfilePhoto(String? photoUrl) async {
+    final json = await _request(
+      'PATCH',
+      '/api/me',
+      body: {'photoUrl': photoUrl},
+    );
+    return AppUser.fromJson(json['user'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<AppUser> setMyBirthday({
+    required int birthdayMonth,
+    required int birthdayDay,
+    int? birthYear,
+  }) async {
+    final json = await _request(
+      'PUT',
+      '/api/me/birthday',
+      body: {
+        'birthdayMonth': birthdayMonth,
+        'birthdayDay': birthdayDay,
+        'birthYear': birthYear,
+      },
+    );
     return AppUser.fromJson(json['user'] as Map<String, dynamic>);
   }
 
@@ -358,11 +438,15 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
     required String newPassword,
     required String confirmation,
   }) async {
-    await _request('POST', '/api/me/password', body: {
-      'currentPassword': currentPassword,
-      'newPassword': newPassword,
-      'confirmPassword': confirmation,
-    });
+    await _request(
+      'POST',
+      '/api/me/password',
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+        'confirmPassword': confirmation,
+      },
+    );
   }
 
   @override
@@ -389,16 +473,21 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
 
   @override
   Future<BirthdayPage> birthdays(BirthdayQuery query) async {
-    final json = await _request('GET', '/api/birthdays', query: {
-      if (query.search != null && query.search!.isNotEmpty) 'search': query.search,
-      if (query.filter != 'all') 'filter': query.filter,
-      'sort': query.sort,
-      if (query.month != null) 'month': query.month,
-      if (query.year != null) 'year': query.year,
-      if (query.date != null) 'date': query.date,
-      'limit': query.limit,
-      'offset': query.offset,
-    });
+    final json = await _request(
+      'GET',
+      '/api/birthdays',
+      query: {
+        if (query.search != null && query.search!.isNotEmpty)
+          'search': query.search,
+        if (query.filter != 'all') 'filter': query.filter,
+        'sort': query.sort,
+        if (query.month != null) 'month': query.month,
+        if (query.year != null) 'year': query.year,
+        if (query.date != null) 'date': query.date,
+        'limit': query.limit,
+        'offset': query.offset,
+      },
+    );
 
     return BirthdayPage(
       items: (json['items'] as List<dynamic>? ?? const [])
@@ -425,7 +514,11 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
   @override
   Future<Birthday> updateBirthday(Birthday birthday) async {
     return Birthday.fromJson(
-      await _request('PUT', '/api/birthdays/${birthday.id}', body: birthday.toRequest()),
+      await _request(
+        'PUT',
+        '/api/birthdays/${birthday.id}',
+        body: birthday.toRequest(),
+      ),
     );
   }
 
@@ -445,14 +538,22 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
   @override
   Future<Reminder> createReminder(String birthdayId, Reminder reminder) async {
     return Reminder.fromJson(
-      await _request('POST', '/api/birthdays/$birthdayId/reminders', body: reminder.toRequest()),
+      await _request(
+        'POST',
+        '/api/birthdays/$birthdayId/reminders',
+        body: reminder.toRequest(),
+      ),
     );
   }
 
   @override
   Future<Reminder> updateReminder(String reminderId, Reminder reminder) async {
     return Reminder.fromJson(
-      await _request('PATCH', '/api/reminders/$reminderId', body: reminder.toRequest()),
+      await _request(
+        'PATCH',
+        '/api/reminders/$reminderId',
+        body: reminder.toRequest(),
+      ),
     );
   }
 
@@ -462,19 +563,33 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
   }
 
   @override
-  Future<CalendarMonth> calendar({required int month, required int year}) async {
+  Future<CalendarMonth> calendar({
+    required int month,
+    required int year,
+  }) async {
     return CalendarMonth.fromJson(
-      await _request('GET', '/api/calendar', query: {'month': month, 'year': year}),
+      await _request(
+        'GET',
+        '/api/calendar',
+        query: {'month': month, 'year': year},
+      ),
     );
   }
 
   @override
-  Future<String?> registerDevice({required String fcmToken, String? deviceName}) async {
-    final json = await _request('POST', '/api/devices', body: {
-      'fcmToken': fcmToken,
-      'platform': 'android',
-      'deviceName': ?deviceName,
-    });
+  Future<String?> registerDevice({
+    required String fcmToken,
+    String? deviceName,
+  }) async {
+    final json = await _request(
+      'POST',
+      '/api/devices',
+      body: {
+        'fcmToken': fcmToken,
+        'platform': 'android',
+        'deviceName': ?deviceName,
+      },
+    );
     return json['id'] as String?;
   }
 
@@ -484,21 +599,31 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
   }
 
   @override
-  Future<TestNotificationResult> sendTestNotification({String? birthdayId}) async {
-    final json = await _request('POST', '/api/dev/test-notification', body: {
-      'birthdayId': ?birthdayId,
-    });
+  Future<TestNotificationResult> sendTestNotification({
+    String? birthdayId,
+  }) async {
+    final json = await _request(
+      'POST',
+      '/api/dev/test-notification',
+      body: {'birthdayId': ?birthdayId},
+    );
     return TestNotificationResult.fromJson(json);
   }
 
   @override
-  Future<String> uploadPhoto({required Uint8List bytes, required String filename}) async {
+  Future<String> uploadPhoto({
+    required Uint8List bytes,
+    required String filename,
+  }) async {
     final form = FormData.fromMap({
       'file': MultipartFile.fromBytes(bytes, filename: filename),
     });
 
     try {
-      final response = await _dio.post<Map<String, dynamic>>('/api/photos', data: form);
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/photos',
+        data: form,
+      );
       final json = _unwrap(response);
       return json['url'] as String;
     } on DioException catch (error) {
@@ -507,10 +632,18 @@ class HttpBirthdayReminderApi implements BirthdayReminderApi {
   }
 
   @override
+  Future<void> deletePhoto(String relativeUrl) async {
+    await _request('DELETE', relativeUrl);
+  }
+
+  @override
   Future<Uint8List> photoBytes(String relativeUrl) async {
     final url = absoluteUrl(relativeUrl);
     if (!_isBackendUrl(url)) {
-      throw ApiException(ApiErrorCode.forbidden, 'Photos can only be loaded from your server.');
+      throw ApiException(
+        ApiErrorCode.forbidden,
+        'Photos can only be loaded from your server.',
+      );
     }
     try {
       final response = await _dio.get<List<int>>(

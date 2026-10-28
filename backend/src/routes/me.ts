@@ -4,7 +4,7 @@ import { RATE_LIMITS } from '../lib/rate-limit'
 import { enforceRateLimit, readJsonBody } from '../lib/route-helpers'
 import { toUserDto } from '../models'
 import { changePassword } from '../services/auth-service'
-import { deleteAccount, updateUser } from '../services/user-service'
+import { deleteAccount, setUserBirthday, updateUser } from '../services/user-service'
 
 const me = new Hono<AppEnv>()
 
@@ -13,6 +13,11 @@ me.get('/', (c) => c.json({ user: toUserDto(c.get('user')) }))
 me.patch('/', async (c) => {
   const body = await readJsonBody(c)
   return c.json({ user: await updateUser(c.env, c.get('user'), body) })
+})
+
+me.put('/birthday', async (c) => {
+  const body = await readJsonBody(c)
+  return c.json({ user: await setUserBirthday(c.env, c.get('user'), body) })
 })
 
 me.post('/password', async (c) => {

@@ -148,8 +148,7 @@ Debug builds allow plain HTTP for this workflow. Release builds do not, so they 
 ```bash
 cd app
 flutter build apk --release \
-  --dart-define=API_BASE_URL=https://YOUR_WORKER_URL \
-  --dart-define=APP_VERSION=1.2.0
+  --dart-define=API_BASE_URL=https://YOUR_WORKER_URL
 ```
 
 The APK is written to `app/build/app/outputs/flutter-apk/app-release.apk`. Without a release keystore
@@ -183,7 +182,6 @@ the app against a real backend.
 | Value | Purpose |
 | --- | --- |
 | `--dart-define=API_BASE_URL=...` | The backend the app calls. Defaults to `http://10.0.2.2:8787` for local development. |
-| `--dart-define=APP_VERSION=...` | The version string shown in the app. The current package version is `1.2.0`; the built-in fallback is `1.0.0`. |
 
 **Files each checkout supplies for itself**, all gitignored:
 

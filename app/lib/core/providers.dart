@@ -1,5 +1,6 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../shared/models/user_settings.dart';
 import 'api/birthday_reminder_api.dart';
@@ -35,8 +36,15 @@ final lastSyncedProvider = FutureProvider<DateTime?>(
 
 final pushServiceProvider = Provider<PushService>((ref) => PushService());
 
+/// The installed package version, so About always matches the APK users run.
+final packageInfoProvider = FutureProvider<PackageInfo>(
+  (ref) => PackageInfo.fromPlatform(),
+);
+
 /// Overridden in tests (and on platforms without widgets) with a fake.
-final widgetBridgeProvider = Provider<WidgetBridge>((ref) => const HomeWidgetBridge());
+final widgetBridgeProvider = Provider<WidgetBridge>(
+  (ref) => const HomeWidgetBridge(),
+);
 
 final widgetSyncProvider = Provider<WidgetSync>(
   (ref) => WidgetSync(ref.watch(widgetBridgeProvider)),
@@ -44,9 +52,13 @@ final widgetSyncProvider = Provider<WidgetSync>(
 
 /// The device's IANA timezone, resolved through the platform channel.
 /// Overridden in tests so no plugin is required.
-final deviceTimezoneProvider = FutureProvider<String>((ref) => deviceTimezone());
+final deviceTimezoneProvider = FutureProvider<String>(
+  (ref) => deviceTimezone(),
+);
 
-final authControllerProvider = NotifierProvider<AuthController, AuthState>(AuthController.new);
+final authControllerProvider = NotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);
 
 /// The signed-in user's id, or null. Data providers watch this so that signing
 /// out, or another account signing in, rebuilds them instead of leaving the
@@ -57,9 +69,9 @@ final sessionUserIdProvider = Provider<String?>(
 
 /// Connectivity is only used to show the offline banner and disable writes.
 final connectivityProvider = StreamProvider<bool>((ref) {
-  return Connectivity()
-      .onConnectivityChanged
-      .map((results) => results.any((result) => result != ConnectivityResult.none));
+  return Connectivity().onConnectivityChanged.map(
+    (results) => results.any((result) => result != ConnectivityResult.none),
+  );
 });
 
 class ThemeModeController extends Notifier<AppThemeMode> {
@@ -79,4 +91,6 @@ class ThemeModeController extends Notifier<AppThemeMode> {
   }
 }
 
-final themeModeProvider = NotifierProvider<ThemeModeController, AppThemeMode>(ThemeModeController.new);
+final themeModeProvider = NotifierProvider<ThemeModeController, AppThemeMode>(
+  ThemeModeController.new,
+);
