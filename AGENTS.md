@@ -19,6 +19,15 @@ Monorepo for a production Android birthday reminder app.
 - 29 February birthdays fall back to 28 February in non-leap years.
 - Never commit secrets. Worker secrets live in `.dev.vars` (local) or `wrangler secret` (deployed).
 
+## Release policy
+
+- The app is private and distributed only to the owner's personal devices. It will not be
+  published to Google Play or as a public GitHub release.
+- "Release" means a signed release APK/AAB for those personal devices; GitHub tags and public
+  releases are not required.
+- `app/pubspec.yaml` is the source of truth for the current app version. As of 2026-10-28, the
+  latest private release version is `1.3.0+7`.
+
 ## Commands
 
 ```bash

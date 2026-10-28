@@ -14,8 +14,7 @@ const EXTENSION_BY_TYPE: Record<SupportedType, string> = {
 
 /** Detects the real image type from magic bytes; the upload's claim is ignored. */
 export function detectImageType(bytes: Uint8Array): SupportedType | null {
-  const startsWith = (...signature: number[]) =>
-    signature.every((value, index) => bytes[index] === value)
+  const startsWith = (...signature: number[]) => signature.every((value, index) => bytes[index] === value)
 
   if (startsWith(0xff, 0xd8, 0xff)) return 'image/jpeg'
   if (startsWith(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return 'image/png'
@@ -69,9 +68,13 @@ export async function uploadPhoto(
 export async function deletePhoto(env: Env, userId: string, key: string): Promise<void> {
   assertPhotoOwnership(userId, key)
   await env.PHOTOS.delete(key)
-  await env.DB.prepare('UPDATE birthdays SET photo_url = NULL WHERE user_id = ? AND photo_url = ?')
-    .bind(userId, key)
-    .run()
+  await env.DB.batch([
+    env.DB.prepare('UPDATE birthdays SET photo_url = NULL WHERE user_id = ? AND photo_url = ?').bind(
+      userId,
+      key,
+    ),
+    env.DB.prepare('UPDATE users SET photo_url = NULL WHERE id = ? AND photo_url = ?').bind(userId, key),
+  ])
 }
 
 export async function readPhoto(

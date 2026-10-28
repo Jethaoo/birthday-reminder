@@ -1,12 +1,18 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/providers.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/dialogs.dart';
+import '../../../shared/widgets/person_avatar.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -19,6 +25,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   final _nameController = TextEditingController();
   bool _initialised = false;
   bool _saving = false;
+  bool _savingPhoto = false;
 
   @override
   void dispose() {
@@ -29,23 +36,127 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Future<void> _saveName() async {
     final error = Validators.name(_nameController.text);
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
 
     setState(() => _saving = true);
     try {
-      final updated = await ref.read(apiProvider).updateMe(name: _nameController.text.trim());
+      final updated = await ref
+          .read(apiProvider)
+          .updateMe(name: _nameController.text.trim());
       await ref.read(authControllerProvider.notifier).applyUser(updated);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name updated')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Name updated')));
       }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _pickProfilePhoto() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 90,
+    );
+    if (picked == null) return;
+
+    setState(() => _savingPhoto = true);
+    String? uploadedUrl;
+    try {
+      final raw = await picked.readAsBytes();
+      Uint8List bytes = raw;
+      try {
+        final compressed = await FlutterImageCompress.compressWithList(
+          raw,
+          minWidth: 800,
+          minHeight: 800,
+          quality: 80,
+        );
+        if (compressed.isNotEmpty) bytes = compressed;
+      } catch (_) {
+        // Keep the original when compression is unavailable on this device.
+      }
+
+      uploadedUrl = await ref
+          .read(apiProvider)
+          .uploadPhoto(bytes: bytes, filename: picked.name);
+      final updated = await ref
+          .read(apiProvider)
+          .updateProfilePhoto(uploadedUrl);
+      await ref.read(authControllerProvider.notifier).applyUser(updated);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profile photo updated')));
+      }
+    } on ApiException catch (error) {
+      if (uploadedUrl != null) {
+        try {
+          await ref.read(apiProvider).deletePhoto(uploadedUrl);
+        } catch (_) {
+          // The next profile-photo change can leave this orphan for cleanup.
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (uploadedUrl != null) {
+        try {
+          await ref.read(apiProvider).deletePhoto(uploadedUrl);
+        } catch (_) {}
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update your profile photo.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingPhoto = false);
+    }
+  }
+
+  Future<void> _removeProfilePhoto() async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Remove profile photo?',
+      message: 'Your initials will be shown instead.',
+      confirmLabel: 'Remove',
+      destructive: false,
+    );
+    if (!confirmed || !mounted) return;
+
+    setState(() => _savingPhoto = true);
+    try {
+      final updated = await ref.read(apiProvider).updateProfilePhoto(null);
+      await ref.read(authControllerProvider.notifier).applyUser(updated);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profile photo removed')));
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _savingPhoto = false);
     }
   }
 
@@ -67,7 +178,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               TextFormField(
                 controller: currentController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Current password'),
+                decoration: const InputDecoration(
+                  labelText: 'Current password',
+                ),
                 validator: (value) => (value ?? '').isEmpty ? 'Required' : null,
               ),
               TextFormField(
@@ -79,17 +192,25 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               TextFormField(
                 controller: confirmController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Confirm password'),
-                validator: (value) => Validators.confirmPassword(value, newController.text),
+                decoration: const InputDecoration(
+                  labelText: 'Confirm password',
+                ),
+                validator: (value) =>
+                    Validators.confirmPassword(value, newController.text),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () {
-              if (formKey.currentState?.validate() ?? false) Navigator.of(context).pop(true);
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.of(context).pop(true);
+              }
             },
             style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
             child: const Text('Save'),
@@ -101,21 +222,29 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     if (submitted != true) return;
 
     try {
-      await ref.read(apiProvider).changePassword(
+      await ref
+          .read(apiProvider)
+          .changePassword(
             currentPassword: currentController.text,
             newPassword: newController.text,
             confirmation: confirmController.text,
           );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password changed. Please sign in again.')),
+          const SnackBar(
+            content: Text('Password changed. Please sign in again.'),
+          ),
         );
-        await ref.read(authControllerProvider.notifier).signOut(notifyServer: false);
+        await ref
+            .read(authControllerProvider.notifier)
+            .signOut(notifyServer: false);
         if (mounted) context.go('/login');
       }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
   }
@@ -135,7 +264,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           decoration: const InputDecoration(labelText: 'Password'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
@@ -149,11 +281,15 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
     try {
       await ref.read(apiProvider).deleteAccount(passwordController.text);
-      await ref.read(authControllerProvider.notifier).signOut(notifyServer: false);
+      await ref
+          .read(authControllerProvider.notifier)
+          .signOut(notifyServer: false);
       if (mounted) context.go('/');
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
   }
@@ -174,6 +310,46 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: [
+          Center(
+            child: Column(
+              children: [
+                PersonAvatar(
+                  initials: user?.initials ?? '?',
+                  colorSeed: (user?.name ?? '?').codeUnits.fold<int>(
+                    0,
+                    (sum, unit) => sum + unit,
+                  ),
+                  size: 96,
+                  photoUrl: user?.photoUrl,
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _savingPhoto ? null : _pickProfilePhoto,
+                      icon: const Icon(Icons.photo_library_outlined, size: 18),
+                      label: Text(
+                        user?.photoUrl == null ? 'Add photo' : 'Change photo',
+                      ),
+                    ),
+                    if (user?.photoUrl != null)
+                      TextButton.icon(
+                        onPressed: _savingPhoto ? null : _removeProfilePhoto,
+                        style: TextButton.styleFrom(
+                          foregroundColor: palette.error,
+                        ),
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        label: const Text('Remove'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           TextFormField(
             controller: _nameController,
             decoration: const InputDecoration(labelText: 'Name'),
@@ -196,15 +372,33 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               helperText: 'Updated automatically from this device',
             ),
           ),
+          const SizedBox(height: 14),
+          if (user?.hasBirthday == true)
+            InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Your birthday',
+                helperText: 'Set once and cannot be changed.',
+              ),
+              child: Text(
+                '${longDate(DateTime(2000, user!.birthdayMonth!, user.birthdayDay!))}'
+                '${user.birthYear == null ? '' : ' · Born ${user.birthYear}'}',
+              ),
+            ),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _saving ? null : _saveName,
             child: const Text('Save changes'),
           ),
           const SizedBox(height: 10),
-          OutlinedButton(onPressed: _changePassword, child: const Text('Change password')),
+          OutlinedButton(
+            onPressed: _changePassword,
+            child: const Text('Change password'),
+          ),
           const SizedBox(height: 28),
-          Text('Danger zone', style: text.titleMedium?.copyWith(color: palette.error)),
+          Text(
+            'Danger zone',
+            style: text.titleMedium?.copyWith(color: palette.error),
+          ),
           const SizedBox(height: 6),
           Text(
             'Deleting your account removes your birthdays, reminders, device registrations and photos.',

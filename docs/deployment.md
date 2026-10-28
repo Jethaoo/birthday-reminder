@@ -69,8 +69,7 @@ The API origin is a compile-time value:
 ```bash
 cd app
 flutter build appbundle --release \
-  --dart-define=API_BASE_URL=https://YOUR_WORKER_URL \
-  --dart-define=APP_VERSION=1.2.0
+  --dart-define=API_BASE_URL=https://YOUR_WORKER_URL
 ```
 
 Debug builds allow cleartext HTTP so they can also point at a local Worker; release builds refuse it,
@@ -116,8 +115,7 @@ Build the release bundle and confirm the signer before uploading:
 ```bash
 cd app
 flutter build appbundle --release \
-  --dart-define=API_BASE_URL=https://YOUR_WORKER_URL \
-  --dart-define=APP_VERSION=1.2.0
+  --dart-define=API_BASE_URL=https://YOUR_WORKER_URL
 
 keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
 ```

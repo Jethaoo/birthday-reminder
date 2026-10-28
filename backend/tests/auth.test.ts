@@ -6,7 +6,16 @@ import { requestPasswordReset } from '../src/services/auth-service'
 import { api, json, registerUser, uniqueEmail, uniqueIp } from './helpers'
 
 interface AuthBody {
-  user: { id: string; name: string; email: string; timezone: string }
+  user: {
+    id: string
+    name: string
+    email: string
+    timezone: string
+    photoUrl: string | null
+    birthdayMonth: number | null
+    birthdayDay: number | null
+    birthYear: number | null
+  }
   accessToken: string
 }
 
@@ -27,6 +36,8 @@ describe('registration', () => {
     const body = await json<AuthBody>(response)
     expect(body.user.email).toBe(email)
     expect(body.user.timezone).toBe('Asia/Kuala_Lumpur')
+    expect(body.user.photoUrl).toBeNull()
+    expect(body.user.birthdayMonth).toBeNull()
     expect(body.accessToken.split('.')).toHaveLength(3)
     expect(JSON.stringify(body)).not.toContain('password')
     expect(JSON.stringify(body)).not.toContain('pbkdf2')
@@ -188,6 +199,48 @@ describe('protected routes', () => {
       user: { name: 'Jordan Davis', timezone: 'Australia/Sydney' },
     })
   })
+
+  it('sets the account birthday once and rejects later changes', async () => {
+    const user = await registerUser()
+    const first = await api('PUT', '/api/me/birthday', {
+      token: user.token,
+      body: { birthdayMonth: 2, birthdayDay: 29, birthYear: 2000 },
+    })
+
+    expect(first.status).toBe(200)
+    expect(
+      await json<{ user: { birthdayMonth: number; birthdayDay: number; birthYear: number } }>(first),
+    ).toMatchObject({
+      user: { birthdayMonth: 2, birthdayDay: 29, birthYear: 2000 },
+    })
+
+    const second = await api('PUT', '/api/me/birthday', {
+      token: user.token,
+      body: { birthdayMonth: 3, birthdayDay: 1, birthYear: 2000 },
+    })
+    expect(second.status).toBe(409)
+
+    const current = await api('GET', '/api/me', { token: user.token })
+    expect(
+      await json<{ user: { birthdayMonth: number; birthdayDay: number; birthYear: number } }>(current),
+    ).toMatchObject({
+      user: { birthdayMonth: 2, birthdayDay: 29, birthYear: 2000 },
+    })
+  })
+
+  it('validates the account birthday before setting it', async () => {
+    const user = await registerUser()
+    const response = await api('PUT', '/api/me/birthday', {
+      token: user.token,
+      body: { birthdayMonth: 2, birthdayDay: 29, birthYear: 2001 },
+    })
+    expect(response.status).toBe(422)
+
+    const unchanged = await api('GET', '/api/me', { token: user.token })
+    expect(await json<{ user: { birthdayMonth: number | null } }>(unchanged)).toMatchObject({
+      user: { birthdayMonth: null },
+    })
+  })
 })
 
 describe('password reset', () => {
@@ -206,11 +259,7 @@ describe('password reset', () => {
 
   it('resets the password and invalidates older tokens', async () => {
     const user = await registerUser()
-    const tokenIssuedBefore = await signToken(
-      user.id,
-      env.JWT_SECRET,
-      new Date(Date.now() - 60_000),
-    )
+    const tokenIssuedBefore = await signToken(user.id, env.JWT_SECRET, new Date(Date.now() - 60_000))
 
     const forgot = await api('POST', '/api/auth/forgot-password', { body: { email: user.email } })
     const { resetToken } = await json<{ resetToken?: string }>(forgot)
@@ -269,7 +318,10 @@ describe('debug affordances by environment', () => {
   it('never returns the reset token from staging or production', async () => {
     const user = await registerUser()
     for (const environment of ['staging', 'production']) {
-      const token = await requestPasswordReset({ ...bindings, ENVIRONMENT: environment }, { email: user.email })
+      const token = await requestPasswordReset(
+        { ...bindings, ENVIRONMENT: environment },
+        { email: user.email },
+      )
       expect(token).toBeNull()
     }
   })
@@ -314,7 +366,11 @@ describe('rate limiting', () => {
     for (let attempt = 0; attempt < 6; attempt += 1) {
       const response = await api('POST', '/api/me/password', {
         token: user.token,
-        body: { currentPassword: 'WrongPassword1', password: 'NewPassword123', confirmPassword: 'NewPassword123' },
+        body: {
+          currentPassword: 'WrongPassword1',
+          password: 'NewPassword123',
+          confirmPassword: 'NewPassword123',
+        },
       })
       lastStatus = response.status
     }

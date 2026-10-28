@@ -1,9 +1,15 @@
+import { storedPhotoUrl } from './services/photo-service'
+
 export interface UserRow {
   id: string
   email: string
   password_hash: string
   display_name: string
   timezone: string
+  photo_url: string | null
+  birthday_month: number | null
+  birthday_day: number | null
+  birth_year: number | null
   password_changed_at: string
   created_at: string
   updated_at: string
@@ -67,6 +73,10 @@ export interface UserDto {
   name: string
   email: string
   timezone: string
+  photoUrl: string | null
+  birthdayMonth: number | null
+  birthdayDay: number | null
+  birthYear: number | null
   createdAt: string
 }
 
@@ -161,6 +171,10 @@ export function toUserDto(row: UserRow): UserDto {
     name: row.display_name,
     email: row.email,
     timezone: row.timezone,
+    photoUrl: storedPhotoUrl(row.photo_url),
+    birthdayMonth: row.birthday_month,
+    birthdayDay: row.birthday_day,
+    birthYear: row.birth_year,
     createdAt: row.created_at,
   }
 }

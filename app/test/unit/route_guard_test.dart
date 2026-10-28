@@ -24,6 +24,26 @@ void main() {
     expect(sessionRedirect(signedInState, splashRoute), '/home');
   });
 
+  test('a signed-in user must set their own birthday once', () {
+    expect(
+      sessionRedirect(profileIncompleteState, '/home'),
+      completeProfileRoute,
+    );
+    expect(
+      sessionRedirect(profileIncompleteState, '/birthdays'),
+      completeProfileRoute,
+    );
+    expect(
+      sessionRedirect(profileIncompleteState, completeProfileRoute),
+      isNull,
+    );
+    expect(
+      sessionRedirect(profileIncompleteState, splashRoute),
+      completeProfileRoute,
+    );
+    expect(sessionRedirect(signedInState, completeProfileRoute), '/home');
+  });
+
   test('a signed-out user is kept on the public routes', () {
     expect(sessionRedirect(signedOutState, '/'), isNull);
     expect(sessionRedirect(signedOutState, '/login'), isNull);

@@ -74,8 +74,9 @@ expiry. Tokens issued before the change are rejected afterwards.
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| `GET` | `/api/me` | Returns `{ user }` |
-| `PATCH` | `/api/me` | `{ name?, timezone? }`; returns `{ user }` |
+| `GET` | `/api/me` | Returns `{ user }`, including profile photo and one-time birthday fields |
+| `PATCH` | `/api/me` | `{ name?, timezone?, photoUrl? }`; `photoUrl: null` removes the profile photo |
+| `PUT` | `/api/me/birthday` | `{ birthdayMonth, birthdayDay, birthYear? }`; can be called successfully only once |
 | `POST` | `/api/me/password` | `{ currentPassword, newPassword, confirmPassword }`; old tokens stop working |
 | `DELETE` | `/api/me` | `{ password }` — removes the account, birthdays, reminders, devices, photos, reset tokens and settings |
 
@@ -169,7 +170,7 @@ notifications.
 | --- | --- | --- |
 | `POST` | `/api/photos` | Multipart `file`; JPEG/PNG/WebP, max 5 MB; returns `{ key, url, contentType, size }` |
 | `GET` | `/api/photos/*` | Authenticated read; only the owner can fetch it |
-| `DELETE` | `/api/photos/*` | Deletes the object and clears it from any birthday |
+| `DELETE` | `/api/photos/*` | Deletes the object and clears it from any birthday or account profile |
 
 The type is detected from magic bytes, object names are generated server-side, and only the object key
 is stored in D1.

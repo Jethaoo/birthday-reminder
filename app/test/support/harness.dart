@@ -17,10 +17,23 @@ const testUser = AppUser(
   name: 'Jordan Davis',
   email: 'jordan@example.com',
   timezone: 'Asia/Kuala_Lumpur',
+  birthdayMonth: 1,
+  birthdayDay: 15,
+  birthYear: 1990,
 );
 
 /// Signed-in state used by screens that require a session.
 const signedInState = AuthState(status: AuthStatus.signedIn, user: testUser);
+
+const profileIncompleteState = AuthState(
+  status: AuthStatus.signedIn,
+  user: AppUser(
+    id: 'user-new',
+    name: 'New User',
+    email: 'new@example.com',
+    timezone: 'Asia/Kuala_Lumpur',
+  ),
+);
 
 /// Signed-out state for the authentication screens.
 const signedOutState = AuthState(status: AuthStatus.signedOut);
@@ -90,28 +103,23 @@ Birthday sampleBirthday({
   int daysUntil = 7,
   String? relationship = 'Friend',
   String? notes,
-}) =>
-    Birthday(
-      id: id,
-      name: name,
-      birthdayMonth: month,
-      birthdayDay: day,
-      birthYear: 2000,
-      relationship: relationship,
-      notes: notes,
-      giftIdeas: const ['Perfume'],
-      reminders: const [],
-      nextOccurrence: DateTime(2026, month, day),
-      daysUntil: daysUntil,
-      turningAge: 26,
-    );
+}) => Birthday(
+  id: id,
+  name: name,
+  birthdayMonth: month,
+  birthdayDay: day,
+  birthYear: 2000,
+  relationship: relationship,
+  notes: notes,
+  giftIdeas: const ['Perfume'],
+  reminders: const [],
+  nextOccurrence: DateTime(2026, month, day),
+  daysUntil: daysUntil,
+  turningAge: 26,
+);
 
 /// Wraps a screen with the app theme and provider overrides.
-Widget wrapScreen(
-  Widget child, {
-  required FakeApi api,
-  AuthState? auth,
-}) {
+Widget wrapScreen(Widget child, {required FakeApi api, AuthState? auth}) {
   return ProviderScope(
     overrides: [
       apiProvider.overrideWithValue(api),
@@ -119,7 +127,9 @@ Widget wrapScreen(
       deviceTimezoneProvider.overrideWith((ref) => 'Asia/Kuala_Lumpur'),
       if (auth != null)
         authControllerProvider.overrideWith(() {
-          return auth.isSignedIn ? FakeAuthController(auth.user ?? testUser) : FakeSignedOutAuthController();
+          return auth.isSignedIn
+              ? FakeAuthController(auth.user ?? testUser)
+              : FakeSignedOutAuthController();
         }),
     ],
     child: MaterialApp(
@@ -140,7 +150,10 @@ Widget wrapWithRouter(
     initialLocation: initialLocation,
     routes: [
       // The real app mounts these screens inside AppShell's Scaffold.
-      GoRoute(path: '/', builder: (_, _) => Scaffold(body: child)),
+      GoRoute(
+        path: '/',
+        builder: (_, _) => Scaffold(body: child),
+      ),
       for (final path in const [
         '/home',
         '/login',
@@ -170,13 +183,12 @@ Widget wrapWithRouter(
       deviceTimezoneProvider.overrideWith((ref) => 'Asia/Kuala_Lumpur'),
       if (auth != null)
         authControllerProvider.overrideWith(() {
-          return auth.isSignedIn ? FakeAuthController(auth.user ?? testUser) : FakeSignedOutAuthController();
+          return auth.isSignedIn
+              ? FakeAuthController(auth.user ?? testUser)
+              : FakeSignedOutAuthController();
         }),
     ],
-    child: MaterialApp.router(
-      theme: AppTheme.light(),
-      routerConfig: router,
-    ),
+    child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
   );
 }
 
@@ -189,7 +201,10 @@ Future<void> tapVisible(WidgetTester tester, Finder finder) async {
 }
 
 /// Gives tests a phone-shaped but tall surface so long screens build fully.
-Future<void> useTallSurface(WidgetTester tester, {Size size = const Size(430, 1800)}) async {
+Future<void> useTallSurface(
+  WidgetTester tester, {
+  Size size = const Size(430, 1800),
+}) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
 }
