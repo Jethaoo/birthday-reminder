@@ -21,7 +21,7 @@ import {
   type UserSettingsDto,
   type UserSettingsRow,
 } from '../models'
-import { assertPhotoOwnership, keyFromPhotoUrl } from './photo-service'
+import { assertPhotoOwnership, deletePhotoIfUnused, keyFromPhotoUrl } from './photo-service'
 
 const MIN_BIRTH_YEAR = 1900
 
@@ -92,10 +92,10 @@ export async function updateUser(env: Env, user: UserRow, body: unknown): Promis
   const updated = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first<UserRow>()
   if (!updated) throw ApiError.server('Could not update the account.')
 
-  // Replace/remove the old object only after the account now points elsewhere.
-  // This also avoids deleting a photo that is still the active profile picture.
+  // Replace/remove the old object only after the account now points elsewhere and
+  // neither the profile nor a birthday references it.
   if (previousPhotoKey && previousPhotoKey !== updated.photo_url) {
-    await env.PHOTOS.delete(previousPhotoKey)
+    await deletePhotoIfUnused(env, user.id, previousPhotoKey)
   }
   return toUserDto(updated)
 }
