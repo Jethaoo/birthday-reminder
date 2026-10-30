@@ -76,6 +76,9 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
 - **backend:** Replacing or clearing a birthday's photo left the old file in R2, and deleting a
   birthday could delete a photo another birthday still used. Old photos are now removed only once no
   birthday refers to them.
+- **backend:** Clearing or replacing a profile photo could delete an image that was still linked to a
+  birthday, and clearing a birthday could break a shared profile photo. Shared files are now removed
+  only after neither a profile nor a birthday refers to them.
 - **backend:** The "this week" filter covered 8 days instead of 7.
 - **backend:** 29 February was accepted together with a birth year that was not a leap year.
 - **backend:** An invalid `?date=` on `GET /api/birthdays` was silently ignored; it now returns `422`.
@@ -92,6 +95,8 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
   "No internet connection". It is now reported as a server problem.
 - **app:** Restoring a session from secure storage that cannot be decrypted (for example after a
   backup was restored onto a new phone) could leave the app stuck on the loading screen.
+- **app:** Changing the birthday month could leave the day dropdown displaying an invalid value when
+  the selected day was clamped.
 - **app:** The calendar did not refresh after a birthday was created, edited or deleted, and the list
   and home screen did not refresh after a reminder changed.
 - **app:** Changing the search, filter or sort while the next page of birthdays was loading could

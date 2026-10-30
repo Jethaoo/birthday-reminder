@@ -35,7 +35,7 @@ import {
   type UserRow,
 } from '../models'
 import { isUniqueViolation, replaceRemindersStatements } from './reminder-service'
-import { keyFromPhotoUrl, photoUrl, storedPhotoUrl } from './photo-service'
+import { deletePhotoIfUnused, keyFromPhotoUrl, photoUrl, storedPhotoUrl } from './photo-service'
 
 export type BirthdayFilter =
   | 'all'
@@ -409,16 +409,6 @@ export async function updateBirthday(
   }
 
   return getBirthday(env, user, birthdayId)
-}
-
-/** Deletes an R2 photo unless another of the user's birthdays still uses it. */
-async function deletePhotoIfUnused(env: Env, userId: string, key: string): Promise<void> {
-  const stillUsed = await env.DB.prepare(
-    'SELECT 1 FROM birthdays WHERE user_id = ? AND photo_url = ? LIMIT 1',
-  )
-    .bind(userId, key)
-    .first()
-  if (!stillUsed) await env.PHOTOS.delete(key)
 }
 
 export async function deleteBirthday(env: Env, user: UserRow, birthdayId: string): Promise<void> {

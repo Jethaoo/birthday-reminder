@@ -133,6 +133,7 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
                   Expanded(
                     flex: 2,
                     child: DropdownButtonFormField<int>(
+                      key: ValueKey(_month),
                       initialValue: _day,
                       isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Day'),

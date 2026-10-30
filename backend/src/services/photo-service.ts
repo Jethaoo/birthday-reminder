@@ -77,6 +77,19 @@ export async function deletePhoto(env: Env, userId: string, key: string): Promis
   ])
 }
 
+/** Deletes the R2 object only after neither a profile nor a birthday references it. */
+export async function deletePhotoIfUnused(env: Env, userId: string, key: string): Promise<void> {
+  const stillUsed = await env.DB.prepare(
+    `SELECT 1 FROM users WHERE id = ? AND photo_url = ?
+     UNION ALL
+     SELECT 1 FROM birthdays WHERE user_id = ? AND photo_url = ?
+     LIMIT 1`,
+  )
+    .bind(userId, key, userId, key)
+    .first()
+  if (!stillUsed) await env.PHOTOS.delete(key)
+}
+
 export async function readPhoto(
   env: Env,
   userId: string,

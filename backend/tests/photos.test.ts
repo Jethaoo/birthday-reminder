@@ -164,4 +164,86 @@ describe('photo upload', () => {
     })
     expect(await env.PHOTOS.get(second.key)).toBeNull()
   })
+
+  it('keeps a birthday photo when replacing or removing the profile photo', async () => {
+    const user = await registerUser()
+    const shared = await json<UploadBody>(
+      await api('POST', '/api/photos', { token: user.token, formData: photoForm() }),
+    )
+    const replacement = await json<UploadBody>(
+      await api('POST', '/api/photos', { token: user.token, formData: photoForm() }),
+    )
+    const birthday = await createBirthday(user, { name: 'Shared Photo' })
+
+    expect(
+      (
+        await api('PUT', `/api/birthdays/${birthday.id}`, {
+          token: user.token,
+          body: { photoUrl: shared.url },
+        })
+      ).status,
+    ).toBe(200)
+    expect(
+      (await api('PATCH', '/api/me', { token: user.token, body: { photoUrl: shared.url } })).status,
+    ).toBe(200)
+    expect(
+      (await api('PATCH', '/api/me', { token: user.token, body: { photoUrl: replacement.url } })).status,
+    ).toBe(200)
+
+    expect(await env.PHOTOS.head(shared.key)).not.toBeNull()
+    const birthdayAfterReplacement = await json<{ photoUrl: string | null }>(
+      await api('GET', `/api/birthdays/${birthday.id}`, { token: user.token }),
+    )
+    expect(birthdayAfterReplacement.photoUrl).toBe(shared.url)
+
+    expect((await api('PATCH', '/api/me', { token: user.token, body: { photoUrl: null } })).status).toBe(200)
+    expect(await env.PHOTOS.head(shared.key)).not.toBeNull()
+    expect(await env.PHOTOS.head(replacement.key)).toBeNull()
+  })
+
+  it('keeps a profile photo when detaching it from a birthday or deleting the birthday', async () => {
+    const user = await registerUser()
+    const upload = await json<UploadBody>(
+      await api('POST', '/api/photos', { token: user.token, formData: photoForm() }),
+    )
+    const birthday = await createBirthday(user, { name: 'Shared Photo' })
+
+    expect(
+      (await api('PATCH', '/api/me', { token: user.token, body: { photoUrl: upload.url } })).status,
+    ).toBe(200)
+    expect(
+      (
+        await api('PUT', `/api/birthdays/${birthday.id}`, {
+          token: user.token,
+          body: { photoUrl: upload.url },
+        })
+      ).status,
+    ).toBe(200)
+    expect(
+      (
+        await api('PUT', `/api/birthdays/${birthday.id}`, {
+          token: user.token,
+          body: { photoUrl: null },
+        })
+      ).status,
+    ).toBe(200)
+
+    expect(await env.PHOTOS.head(upload.key)).not.toBeNull()
+
+    expect(
+      (
+        await api('PUT', `/api/birthdays/${birthday.id}`, {
+          token: user.token,
+          body: { photoUrl: upload.url },
+        })
+      ).status,
+    ).toBe(200)
+    expect((await api('DELETE', `/api/birthdays/${birthday.id}`, { token: user.token })).status).toBe(200)
+
+    expect(await env.PHOTOS.head(upload.key)).not.toBeNull()
+    const me = await json<{ user: { photoUrl: string | null } }>(
+      await api('GET', '/api/me', { token: user.token }),
+    )
+    expect(me.user.photoUrl).toBe(upload.url)
+  })
 })
