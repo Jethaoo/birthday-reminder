@@ -1,9 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:birthday_reminder/core/api/api_exception.dart';
 import 'package:birthday_reminder/features/birthdays/presentation/birthday_form_screen.dart';
+import 'package:birthday_reminder/features/photos/presentation/photo_viewer_screen.dart';
+import 'package:birthday_reminder/shared/widgets/person_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_api.dart';
+import '../support/fake_photos.dart';
 import '../support/harness.dart';
 
 void main() {
@@ -205,5 +210,114 @@ void main() {
 
     expect(find.widgetWithText(FilledButton, 'Save changes'), findsOneWidget);
     expect(find.text('Import'), findsNothing);
+  });
+
+  testWidgets('uploads the cropped photo, not the picked one', (tester) async {
+    await useTallSurface(tester);
+    final api = FakeApi();
+    final cropped = Uint8List.fromList([7, 7, 7]);
+    final editor = FakePhotoEditor(bytes: cropped);
+
+    await tester.pumpWidget(
+      wrapWithRouter(
+        const BirthdayFormScreen(),
+        api: api,
+        auth: signedInState,
+        photoEditor: editor,
+      ),
+    );
+    await tester.pump();
+
+    await tapVisible(tester, find.text('Add photo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(editor.calls, 1);
+    expect(api.calls['uploadPhoto'], 1);
+    expect(api.uploads.single, cropped);
+    expect(find.text('Change photo'), findsOneWidget);
+  });
+
+  testWidgets('backing out of the crop uploads nothing', (tester) async {
+    await useTallSurface(tester);
+    final api = FakeApi();
+    final editor = FakePhotoEditor();
+
+    await tester.pumpWidget(
+      wrapWithRouter(
+        const BirthdayFormScreen(),
+        api: api,
+        auth: signedInState,
+        photoEditor: editor,
+      ),
+    );
+    await tester.pump();
+
+    await tapVisible(tester, find.text('Add photo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(editor.calls, 1);
+    expect(api.calls['uploadPhoto'], isNull);
+    expect(find.text('Add photo'), findsOneWidget);
+  });
+
+  testWidgets('retries a failed upload without cropping again', (tester) async {
+    await useTallSurface(tester);
+    final api = FakeApi()
+      ..nextError = ApiException(ApiErrorCode.server, 'No connection.');
+    final editor = FakePhotoEditor(bytes: Uint8List.fromList([1, 2]));
+
+    await tester.pumpWidget(
+      wrapWithRouter(
+        const BirthdayFormScreen(),
+        api: api,
+        auth: signedInState,
+        photoEditor: editor,
+      ),
+    );
+    await tester.pump();
+
+    await tapVisible(tester, find.text('Add photo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('No connection.'), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(editor.calls, 1);
+    expect(api.calls['uploadPhoto'], 2);
+    expect(find.text('Change photo'), findsOneWidget);
+  });
+
+  testWidgets('opens an existing photo instead of starting a crop', (tester) async {
+    await useTallSurface(tester);
+    final api = FakeApi(
+      birthdays: [
+        sampleBirthday(
+          id: 'birthday-1',
+          photoUrl: '/api/photos/photos/user-1/sarah.png',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      wrapWithRouter(
+        const BirthdayFormScreen(birthdayId: 'birthday-1'),
+        api: api,
+        auth: signedInState,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.tap(find.byType(PersonAvatar));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PhotoViewerScreen), findsOneWidget);
+    expect(api.calls['uploadPhoto'], isNull);
   });
 }

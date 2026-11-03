@@ -4,6 +4,9 @@ import 'package:birthday_reminder/core/providers.dart';
 import 'package:birthday_reminder/shared/models/app_user.dart';
 import 'package:birthday_reminder/shared/models/birthday.dart';
 import 'package:birthday_reminder/core/auth/session_store.dart';
+import 'package:birthday_reminder/features/photos/photo_editor.dart';
+import 'package:birthday_reminder/features/photos/photo_pipeline.dart';
+import 'package:birthday_reminder/features/photos/photo_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -103,6 +106,7 @@ Birthday sampleBirthday({
   int daysUntil = 7,
   String? relationship = 'Friend',
   String? notes,
+  String? photoUrl,
 }) => Birthday(
   id: id,
   name: name,
@@ -111,6 +115,7 @@ Birthday sampleBirthday({
   birthYear: 2000,
   relationship: relationship,
   notes: notes,
+  photoUrl: photoUrl,
   giftIdeas: const ['Perfume'],
   reminders: const [],
   nextOccurrence: DateTime(2026, month, day),
@@ -119,12 +124,22 @@ Birthday sampleBirthday({
 );
 
 /// Wraps a screen with the app theme and provider overrides.
-Widget wrapScreen(Widget child, {required FakeApi api, AuthState? auth}) {
+Widget wrapScreen(
+  Widget child, {
+  required FakeApi api,
+  AuthState? auth,
+  PhotoEditor? photoEditor,
+  PhotoPipeline? photoPipeline,
+}) {
   return ProviderScope(
     overrides: [
       apiProvider.overrideWithValue(api),
       sessionStoreProvider.overrideWithValue(FakeSessionStore()),
       deviceTimezoneProvider.overrideWith((ref) => 'Asia/Kuala_Lumpur'),
+      if (photoEditor != null)
+        photoEditorProvider.overrideWithValue(photoEditor),
+      if (photoPipeline != null)
+        photoPipelineProvider.overrideWithValue(photoPipeline),
       if (auth != null)
         authControllerProvider.overrideWith(() {
           return auth.isSignedIn
@@ -145,6 +160,8 @@ Widget wrapWithRouter(
   required FakeApi api,
   AuthState? auth,
   String initialLocation = '/',
+  PhotoEditor? photoEditor,
+  PhotoPipeline? photoPipeline,
 }) {
   final router = GoRouter(
     initialLocation: initialLocation,
@@ -187,6 +204,10 @@ Widget wrapWithRouter(
               ? FakeAuthController(auth.user ?? testUser)
               : FakeSignedOutAuthController();
         }),
+      if (photoEditor != null)
+        photoEditorProvider.overrideWithValue(photoEditor),
+      if (photoPipeline != null)
+        photoPipelineProvider.overrideWithValue(photoPipeline),
     ],
     child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
   );

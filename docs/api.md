@@ -175,6 +175,10 @@ notifications.
 The type is detected from magic bytes, object names are generated server-side, and only the object key
 is stored in D1.
 
+The app crops every avatar to a 1024 px square JPEG before uploading, so what is stored is already
+the shape every screen displays. The endpoint itself accepts any supported image: cropping is a
+client concern, not a contract.
+
 ## Development only
 
 `POST /api/dev/test-notification` (body `{ birthdayId?, title?, body? }`) sends a test push to the

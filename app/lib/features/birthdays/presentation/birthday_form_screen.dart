@@ -1,10 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/api_exception.dart';
@@ -16,6 +14,9 @@ import '../../../shared/models/reminder.dart';
 import '../../../shared/widgets/bottom_action_bar.dart';
 import '../../../shared/widgets/person_avatar.dart';
 import '../../../shared/widgets/states.dart';
+import '../../photos/photo_editor.dart';
+import '../../photos/photo_providers.dart';
+import '../../photos/presentation/photo_viewer_screen.dart';
 import '../birthday_providers.dart';
 import '../../settings/settings_providers.dart';
 import 'reminder_editor.dart';
@@ -200,44 +201,51 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
   }
 
   Future<void> _pickPhoto() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 2400,
-      imageQuality: 92,
-    );
-    if (picked == null) return;
-
+    if (_uploadingPhoto) return;
     setState(() => _uploadingPhoto = true);
     try {
-      final raw = await picked.readAsBytes();
-      // Compress before upload so the request stays small on mobile data.
-      Uint8List bytes = raw;
-      try {
-        final compressed = await FlutterImageCompress.compressWithList(
-          raw,
-          minWidth: 1024,
-          minHeight: 1024,
-          quality: 78,
-        );
-        if (compressed.isNotEmpty) bytes = compressed;
-      } catch (_) {
-        // Fall back to the original bytes when compression is unavailable.
-      }
-
-      final url = await ref
-          .read(apiProvider)
-          .uploadPhoto(bytes: bytes, filename: picked.name);
-      if (mounted) setState(() => _photoUrl = url);
-    } on ApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
-      }
+      // Picks, crops and encodes before a single byte is uploaded.
+      final bytes = await ref.read(photoEditorProvider).pickAndCrop(context);
+      if (bytes == null) return;
+      await _uploadPhoto(bytes);
+    } on PhotoUnavailableException catch (error) {
+      _showMessage(error.message);
     } finally {
       if (mounted) setState(() => _uploadingPhoto = false);
     }
+  }
+
+  Future<void> _uploadPhoto(Uint8List bytes) async {
+    final api = ref.read(apiProvider);
+    if (!mounted) return;
+    setState(() => _uploadingPhoto = true);
+    try {
+      final url = await api.uploadPhoto(bytes: bytes, filename: 'avatar.jpg');
+      if (mounted) setState(() => _photoUrl = url);
+    } on ApiException catch (error) {
+      // The cropped bytes are kept so Retry does not send the user back
+      // through the picker and the crop editor.
+      _showMessage(error.message, retry: () => _uploadPhoto(bytes));
+    } catch (_) {
+      _showMessage(
+        "Couldn't upload the photo.",
+        retry: () => _uploadPhoto(bytes),
+      );
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
+
+  void _showMessage(String message, {VoidCallback? retry}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: retry == null
+            ? null
+            : SnackBarAction(label: 'Retry', onPressed: retry),
+      ),
+    );
   }
 
   Future<void> _addDefaultReminder() async {
@@ -400,16 +408,29 @@ class _BirthdayFormState extends ConsumerState<_BirthdayForm> {
             Center(
               child: Column(
                 children: [
-                  PersonAvatar(
-                    initials: _nameController.text.trim().isEmpty
-                        ? '?'
-                        : _nameController.text
-                              .trim()
-                              .substring(0, 1)
-                              .toUpperCase(),
-                    colorSeed: _nameController.text.length,
-                    size: 84,
-                    photoUrl: _photoUrl,
+                  GestureDetector(
+                    // An existing photo opens full screen; without one the
+                    // avatar is another way to start adding it.
+                    onTap: _uploadingPhoto
+                        ? null
+                        : _photoUrl == null
+                        ? _pickPhoto
+                        : () => PhotoViewerScreen.show(
+                            context,
+                            _photoUrl!,
+                            label: _nameController.text.trim(),
+                          ),
+                    child: PersonAvatar(
+                      initials: _nameController.text.trim().isEmpty
+                          ? '?'
+                          : _nameController.text
+                                .trim()
+                                .substring(0, 1)
+                                .toUpperCase(),
+                      colorSeed: _nameController.text.length,
+                      size: 84,
+                      photoUrl: _photoUrl,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Row(

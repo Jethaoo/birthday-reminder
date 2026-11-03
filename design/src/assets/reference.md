@@ -280,6 +280,31 @@ Birthday
 
 Everything else should be optional.
 
+## Photo
+
+A photo is added from the avatar at the top of the form, or from the Account page.
+
+```text
+Add photo
+ ↓
+Take a photo / Choose from library
+ ↓
+Crop photo (1:1, drag to reposition, pinch to zoom)
+ ↓
+Use photo
+ ↓
+Uploaded, shown in the avatar
+```
+
+* The crop is locked to a square because every avatar is shown in a circle. A faint circle guide in
+  the editor shows the result before it is committed.
+* The editor is dark in both themes, with a close action and a single coral **Use photo** action.
+* Nothing is uploaded until **Use photo** is tapped. Backing out leaves the record untouched.
+* Uploading is the only step that needs a connection. The cropped bytes are kept, so a failed upload
+  offers **Retry** without sending the user back through the picker or the crop.
+* A saved photo opens full screen when its avatar is tapped. It is never re-cropped, because every
+  crop and upload is another lossy re-encode.
+
 ---
 
 # 8. Birthday Details Screen
@@ -994,6 +1019,24 @@ Select Contacts
 Import
  ↓
 Back to Add Birthday
+```
+
+## Flow 7. Photo
+
+```text
+Add Birthday
+ ↓
+Add photo
+ ↓
+Take a photo / Choose from library
+ ↓
+Crop photo
+ ↓
+Use photo
+ ↓
+Uploaded
+ ↓
+Avatar
 ```
 
 ---
