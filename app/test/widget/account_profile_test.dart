@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:birthday_reminder/core/api/api_exception.dart';
 import 'package:birthday_reminder/core/auth/auth_controller.dart';
 import 'package:birthday_reminder/features/settings/presentation/account_screen.dart';
 import 'package:birthday_reminder/shared/models/app_user.dart';
@@ -5,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_api.dart';
+import '../support/fake_photos.dart';
 import '../support/harness.dart';
 
 const _userWithPhoto = AppUser(
@@ -54,5 +58,62 @@ void main() {
     expect(api.calls['updateProfilePhoto'], 1);
     expect(api.user.photoUrl, isNull);
     expect(find.text('Profile photo removed'), findsOneWidget);
+  });
+
+  testWidgets('stores the cropped photo as the profile image', (tester) async {
+    await useTallSurface(tester);
+    final api = FakeApi();
+    final cropped = Uint8List.fromList([5, 5, 5]);
+    final editor = FakePhotoEditor(bytes: cropped);
+
+    await tester.pumpWidget(
+      wrapWithRouter(
+        const AccountScreen(),
+        api: api,
+        auth: signedInState,
+        photoEditor: editor,
+      ),
+    );
+    await tester.pump();
+
+    await tapVisible(tester, find.text('Add photo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(editor.calls, 1);
+    expect(api.uploads.single, cropped);
+    expect(api.calls['updateProfilePhoto'], 1);
+    expect(api.user.photoUrl, '/api/photos/photos/user-1/photo.png');
+    expect(find.text('Profile photo updated'), findsOneWidget);
+  });
+
+  testWidgets('deletes the upload when the profile update fails', (tester) async {
+    await useTallSurface(tester);
+    final api = FakeApi()
+      ..updateProfilePhotoError = ApiException(
+        ApiErrorCode.server,
+        'No connection.',
+      );
+    final editor = FakePhotoEditor(bytes: Uint8List.fromList([6]));
+
+    await tester.pumpWidget(
+      wrapWithRouter(
+        const AccountScreen(),
+        api: api,
+        auth: signedInState,
+        photoEditor: editor,
+      ),
+    );
+    await tester.pump();
+
+    await tapVisible(tester, find.text('Add photo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // The rolled-back upload must not stay in R2 pointing at nothing.
+    expect(api.calls['deletePhoto'], 1);
+    expect(api.user.photoUrl, isNull);
+    expect(find.text('No connection.'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
   });
 }

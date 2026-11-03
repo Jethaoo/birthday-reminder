@@ -30,6 +30,9 @@ Cloudflare Worker  ──  REST API, auth, validation, ownership checks
   always go directly to the API and are never queued; a write while offline fails normally.
 - Photos are private R2 objects. The app sends its bearer token only to the configured API origin,
   including when loading a photo.
+- The app crops a photo to a 1:1 avatar (1024 px, JPEG) before uploading it. Cropping and re-encoding
+  happen on the device, so the server stores an image no larger than an avatar needs and never
+  transforms one itself.
 - The home screen widgets are fed by a snapshot the app writes once Home has loaded, and recompute the
   countdown from the device's date themselves: no token and no network in the widget process. See
   [Home screen widgets](widgets.md).

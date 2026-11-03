@@ -134,9 +134,18 @@ class FakeApi implements BirthdayReminderApi {
     return user;
   }
 
+  /// Fails only the profile patch, so tests can exercise the rollback that
+  /// deletes the photo uploaded just before it.
+  ApiException? updateProfilePhotoError;
+
   @override
   Future<AppUser> updateProfilePhoto(String? photoUrl) async {
     _record('updateProfilePhoto');
+    final failure = updateProfilePhotoError;
+    if (failure != null) {
+      updateProfilePhotoError = null;
+      throw failure;
+    }
     _maybeThrow();
     user = user.copyWith(photoUrl: photoUrl, clearPhoto: photoUrl == null);
     return user;

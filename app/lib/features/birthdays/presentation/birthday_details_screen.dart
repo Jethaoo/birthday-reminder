@@ -13,6 +13,7 @@ import '../../../shared/widgets/bottom_action_bar.dart';
 import '../../../shared/widgets/dialogs.dart';
 import '../../../shared/widgets/person_avatar.dart';
 import '../../../shared/widgets/states.dart';
+import '../../photos/presentation/photo_viewer_screen.dart';
 import '../birthday_providers.dart';
 import 'reminder_editor.dart';
 
@@ -115,11 +116,22 @@ class BirthdayDetailsScreen extends ConsumerWidget {
               Center(
                 child: Column(
                   children: [
-                    PersonAvatar(
-                      initials: birthday.initials,
-                      colorSeed: birthday.colorSeed,
-                      size: 88,
-                      photoUrl: birthday.photoUrl,
+                    GestureDetector(
+                      // Photos are private, so the viewer loads them with the
+                      // same bearer token the avatar uses.
+                      onTap: birthday.photoUrl == null
+                          ? null
+                          : () => PhotoViewerScreen.show(
+                              context,
+                              birthday.photoUrl!,
+                              label: birthday.name,
+                            ),
+                      child: PersonAvatar(
+                        initials: birthday.initials,
+                        colorSeed: birthday.colorSeed,
+                        size: 88,
+                        photoUrl: birthday.photoUrl,
+                      ),
                     ),
                     const SizedBox(height: 14),
                     Text(birthday.name, style: text.displaySmall),

@@ -20,12 +20,21 @@ Each entry names the part of the monorepo it affects: **backend**, **app** or **
 
 ### Added
 
+- **app:** A photo is cropped to a square before it is uploaded, from either the birthday form or the
+  Account page. The crop editor keeps the photo upright, locks the aspect ratio to 1:1 and shows the
+  circle the avatar will use.
+- **app:** Adding a photo can come from the camera or the photo library, instead of the library only.
+- **app:** Tapping an avatar that already has a photo opens it full screen, with pinch to zoom.
 - **app:** The Account page can add, replace and remove a private profile photo.
 - **app/backend:** Every account must set its own birthday once and cannot change it afterward.
 - **app:** The Home profile avatar opens Account directly.
 
 ### Changed
 
+- **app:** Uploaded photos are re-encoded to a 1024 px JPEG, down from up to 1600 px, which is several
+  times smaller on mobile data and still sharper than the largest avatar (96 dp).
+- **app:** A failed photo upload offers **Retry** and keeps the crop, instead of making the user pick
+  and crop the photo again.
 - **app:** About reads the installed package version and build number instead of using a separate
   compile-time default.
 - **app:** Android Back unwinds visited tabs, and Home asks for confirmation before exiting.

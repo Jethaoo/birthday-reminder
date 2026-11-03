@@ -55,6 +55,7 @@ import {
   NotificationsScreen,
   SuccessScreen,
 } from './screens/states'
+import { CropPhotoScreen, PhotoSourceSheet, PhotoViewerScreen } from './screens/photos'
 import { dark, light, radius, typography } from './theme'
 
 function Section({
@@ -292,6 +293,14 @@ function FlowsSheet() {
       title: '6. Contact import',
       steps: ['Add birthday', 'Import from contacts', 'Select contacts', 'Import', 'Birthday list'],
     },
+    {
+      title: '7. Photo',
+      steps: ['Add photo', 'Camera or library', 'Crop photo', 'Use photo', 'Upload', 'Avatar'],
+    },
+    {
+      title: '8. View a photo',
+      steps: ['Birthday details', 'Tap avatar', 'Full screen', 'Pinch to zoom', 'Close'],
+    },
   ]
 
   return (
@@ -323,6 +332,7 @@ const navItems: [string, string][] = [
   ['auth', 'Authentication'],
   ['main', 'Main app'],
   ['birthdays', 'Birthday management'],
+  ['photos', 'Photos'],
   ['settings', 'Settings'],
   ['states', 'States'],
   ['dark', 'Dark theme'],
@@ -396,6 +406,16 @@ export default function DesignSurface() {
         <EditBirthdayScreen />
         <ReminderEditorScreen />
         <ContactImportScreen />
+      </Section>
+
+      <Section
+        id="photos"
+        title="Photos"
+        description="A private photo is picked, cropped to a square and only then uploaded. An avatar that already has one opens full screen instead."
+      >
+        <PhotoSourceSheet />
+        <CropPhotoScreen />
+        <PhotoViewerScreen />
       </Section>
 
       <Section

@@ -1,18 +1,20 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/api/birthday_reminder_api.dart';
 import '../../../core/providers.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/dialogs.dart';
 import '../../../shared/widgets/person_avatar.dart';
+import '../../photos/photo_editor.dart';
+import '../../photos/photo_providers.dart';
+import '../../photos/presentation/photo_viewer_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -65,69 +67,74 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   Future<void> _pickProfilePhoto() async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-      imageQuality: 90,
-    );
-    if (picked == null) return;
-
+    if (_savingPhoto) return;
     setState(() => _savingPhoto = true);
-    String? uploadedUrl;
     try {
-      final raw = await picked.readAsBytes();
-      Uint8List bytes = raw;
-      try {
-        final compressed = await FlutterImageCompress.compressWithList(
-          raw,
-          minWidth: 800,
-          minHeight: 800,
-          quality: 80,
-        );
-        if (compressed.isNotEmpty) bytes = compressed;
-      } catch (_) {
-        // Keep the original when compression is unavailable on this device.
-      }
-
-      uploadedUrl = await ref
-          .read(apiProvider)
-          .uploadPhoto(bytes: bytes, filename: picked.name);
-      final updated = await ref
-          .read(apiProvider)
-          .updateProfilePhoto(uploadedUrl);
-      await ref.read(authControllerProvider.notifier).applyUser(updated);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Profile photo updated')));
-      }
-    } on ApiException catch (error) {
-      if (uploadedUrl != null) {
-        try {
-          await ref.read(apiProvider).deletePhoto(uploadedUrl);
-        } catch (_) {
-          // The next profile-photo change can leave this orphan for cleanup.
-        }
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
-      }
-    } catch (_) {
-      if (uploadedUrl != null) {
-        try {
-          await ref.read(apiProvider).deletePhoto(uploadedUrl);
-        } catch (_) {}
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not update your profile photo.')),
-        );
-      }
+      // The stored photo is the square the avatar shows: it is cropped before
+      // anything reaches the network.
+      final bytes = await ref.read(photoEditorProvider).pickAndCrop(context);
+      if (bytes == null) return;
+      await _applyProfilePhoto(bytes);
+    } on PhotoUnavailableException catch (error) {
+      _showMessage(error.message);
     } finally {
       if (mounted) setState(() => _savingPhoto = false);
     }
+  }
+
+  Future<void> _applyProfilePhoto(Uint8List bytes) async {
+    final api = ref.read(apiProvider);
+    final auth = ref.read(authControllerProvider.notifier);
+    if (!mounted) return;
+    setState(() => _savingPhoto = true);
+    String? uploadedUrl;
+    var linked = false;
+    try {
+      uploadedUrl = await api.uploadPhoto(bytes: bytes, filename: 'avatar.jpg');
+      final updated = await api.updateProfilePhoto(uploadedUrl);
+      // Once the profile points at the object it must not be deleted, even if
+      // storing the session afterwards fails.
+      linked = true;
+      await auth.applyUser(updated);
+      _showMessage('Profile photo updated');
+    } on ApiException catch (error) {
+      if (!linked) await _discardUploadedPhoto(api, uploadedUrl);
+      // Retry re-uploads the same crop instead of cropping again.
+      _showMessage(error.message, retry: () => _applyProfilePhoto(bytes));
+    } catch (_) {
+      if (!linked) await _discardUploadedPhoto(api, uploadedUrl);
+      _showMessage(
+        "Couldn't update your profile photo.",
+        retry: () => _applyProfilePhoto(bytes),
+      );
+    } finally {
+      if (mounted) setState(() => _savingPhoto = false);
+    }
+  }
+
+  /// A failed profile update must not leave an orphaned R2 object behind.
+  Future<void> _discardUploadedPhoto(
+    BirthdayReminderApi api,
+    String? uploadedUrl,
+  ) async {
+    if (uploadedUrl == null) return;
+    try {
+      await api.deletePhoto(uploadedUrl);
+    } catch (_) {
+      // The next profile-photo change can leave this orphan for cleanup.
+    }
+  }
+
+  void _showMessage(String message, {VoidCallback? retry}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: retry == null
+            ? null
+            : SnackBarAction(label: 'Retry', onPressed: retry),
+      ),
+    );
   }
 
   Future<void> _removeProfilePhoto() async {
@@ -313,14 +320,27 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           Center(
             child: Column(
               children: [
-                PersonAvatar(
-                  initials: user?.initials ?? '?',
-                  colorSeed: (user?.name ?? '?').codeUnits.fold<int>(
-                    0,
-                    (sum, unit) => sum + unit,
+                GestureDetector(
+                  // A saved photo opens full screen; without one the avatar is
+                  // another way to start adding it.
+                  onTap: _savingPhoto
+                      ? null
+                      : user?.photoUrl == null
+                      ? _pickProfilePhoto
+                      : () => PhotoViewerScreen.show(
+                          context,
+                          user!.photoUrl!,
+                          label: user.name,
+                        ),
+                  child: PersonAvatar(
+                    initials: user?.initials ?? '?',
+                    colorSeed: (user?.name ?? '?').codeUnits.fold<int>(
+                      0,
+                      (sum, unit) => sum + unit,
+                    ),
+                    size: 96,
+                    photoUrl: user?.photoUrl,
                   ),
-                  size: 96,
-                  photoUrl: user?.photoUrl,
                 ),
                 const SizedBox(height: 12),
                 Wrap(

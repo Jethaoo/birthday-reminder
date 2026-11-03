@@ -194,8 +194,9 @@ the app against a real backend.
 
 1. **Create an account.** Register with a name, email and password. The app records your timezone so
    reminders arrive at the time you expect.
-2. **Add a birthday.** Only a name and a date are required. Add a photo, relationship, phone number,
-   email, notes or gift ideas if you want them.
+2. **Add a birthday.** Only a name and a date are required. Add a photo from the camera or your
+   library — it is cropped to the square the avatar shows before it is uploaded — plus a
+   relationship, phone number, email, notes or gift ideas if you want them.
 3. **Set the reminders.** Each birthday starts with a sensible default and can hold several
    reminders — 30, 14, 7, 3 or 1 day before, or on the day — each at a time you choose.
 4. **Wait for the notification.** The server checks the schedule every minute and pushes through
